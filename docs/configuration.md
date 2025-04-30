@@ -37,6 +37,65 @@ AUTH_SECRET=change_this_to_a_secure_secret
 
 ## Step 2: Permit.io Setup
 
+### Option 1: Automated Setup with Script
+
+For quick and consistent setup, you can use the provided setup script that creates all necessary resources, roles, permissions, tenants, and example users in your Permit.io environment:
+
+1. Navigate to the scripts directory:
+```bash
+cd scripts
+```
+
+2. Install the required dependencies:
+```bash
+npm install
+```
+
+3. Run the setup script:
+```bash
+# Using environment variables from .env file
+npm run setup
+
+# Or pass API key directly via command line
+node setup.js --api-key your_api_key_here
+
+# For production environments
+node setup.js --api-key your_api_key_here --environment prod
+```
+
+The script supports the following command line arguments:
+
+```
+--api-key <key>      Permit.io API key (falls back to PERMIT_API_KEY env var)
+--pdp-url <url>      Permit.io PDP URL (falls back to PERMIT_PDP_URL env var)
+--environment <env>  Permit.io environment (falls back to PERMIT_ENVIRONMENT env var)
+--verbose            Enable verbose logging
+--quiet              Suppress all non-error output
+--skip-resources     Skip creating resources
+--skip-roles         Skip creating roles
+--skip-permissions   Skip creating permissions
+--skip-tenants       Skip creating tenants
+--skip-users         Skip creating example users
+--help               Display help message with all available options
+```
+
+For example, to only set up the resources and roles without creating users:
+
+```bash
+node setup.js --api-key your_api_key_here --skip-users
+```
+
+The script will:
+- Create resource types (vehicle, maintenance, fleet, analytics) with attributes
+- Define roles (vehicle owner, service technician, fleet manager, etc.)
+- Set up permission policies with appropriate conditions
+- Create tenants for multi-tenancy support
+- Create example users with appropriate role assignments (unless --skip-users is specified)
+
+The script handles errors gracefully and will continue even if some resources already exist, making it safe to run multiple times.
+
+### Option 2: Manual Setup via Dashboard
+
 ### Create Your Permit.io Project
 
 1. Sign up for a Permit.io account at [app.permit.io](https://app.permit.io/signup)

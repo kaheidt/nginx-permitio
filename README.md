@@ -118,7 +118,53 @@ curl -X GET http://localhost:8080/api/v1/vehicles \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
-For detailed setup instructions, see our [Configuration Guide](docs/configuration.md).
+### Next Steps: Configure Authorization Model
+
+After starting the services, you need to configure your authorization model in Permit.io. You have two options:
+
+#### Option 1: One-Click Setup with the Setup Script
+
+To quickly set up the complete authorization model including resources, roles, and permissions:
+
+1. Navigate to the scripts directory
+```bash
+cd scripts
+```
+
+2. Install the required dependencies
+```bash
+npm install
+```
+
+3. Run the setup script
+```bash
+# Using environment variables from .env file
+npm run setup
+
+# Or pass API key directly via command line
+node setup.js --api-key your_api_key_here
+
+# For production environments
+node setup.js --api-key your_api_key_here --environment prod
+```
+
+The script accepts various command line arguments:
+```
+--api-key <key>      Permit.io API key
+--pdp-url <url>      Permit.io PDP URL
+--environment <env>  Permit.io environment name
+--verbose            Enable verbose logging
+--skip-users         Skip creating example users
+--help               Display all available options
+```
+
+This will automatically create all resources, roles, policies, tenants, and example users in your Permit.io environment.
+
+#### Option 2: Manual Configuration
+
+Alternatively, you can manually configure your authorization model through the Permit.io dashboard by following the steps in our [Configuration Guide](docs/configuration.md).
+
+For detailed setup instructions for either option, see our [Configuration Guide](docs/configuration.md).
 
 ## API Documentation
 

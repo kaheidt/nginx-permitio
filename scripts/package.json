@@ -1,0 +1,13 @@
+{
+  "name": "permit-setup",
+  "version": "1.0.0",
+  "description": "Setup script for Permit.io authorization model",
+  "main": "setup.js",
+  "scripts": {
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "permitio": "^2.0.0"
+  }
+}
