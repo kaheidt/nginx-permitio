@@ -20,7 +20,10 @@ services:
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
     depends_on:
       - auth-service
-      - api-service
+      - vehicle-telemetry
+      - maintenance-service
+      - fleet-management
+      - driver-analytics
 
   auth-service:
     build:
@@ -36,14 +39,54 @@ services:
     ports:
       - "3000:3000"
 
-  api-service:
+  # Vehicle Telemetry Service
+  vehicle-telemetry:
     build:
       context: ./src
       dockerfile: Dockerfile.api
       args:
         - SERVICE_NAME=api
     environment:
-      - SERVICE_NAME=api
+      - SERVICE_NAME=vehicle-telemetry
       - PORT=3001
     ports:
       - "3001:3001"
+  
+  # Maintenance Service
+  maintenance-service:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+      args:
+        - SERVICE_NAME=api
+    environment:
+      - SERVICE_NAME=maintenance-service
+      - PORT=3002
+    ports:
+      - "3002:3002"
+  
+  # Fleet Management Service
+  fleet-management:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+      args:
+        - SERVICE_NAME=api
+    environment:
+      - SERVICE_NAME=fleet-management
+      - PORT=3003
+    ports:
+      - "3003:3003"
+  
+  # Driver Analytics Service
+  driver-analytics:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+      args:
+        - SERVICE_NAME=api
+    environment:
+      - SERVICE_NAME=driver-analytics
+      - PORT=3004
+    ports:
+      - "3004:3004"

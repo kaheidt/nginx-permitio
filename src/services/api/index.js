@@ -155,13 +155,17 @@ function getServiceData() {
 function extractUserFromToken(req) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('No authorization header or not a Bearer token');
     return null;
   }
 
   const token = authHeader.split(' ')[1];
   try {
-    return jwt.decode(token);
+    const decoded = jwt.decode(token);
+    console.log('Decoded token:', JSON.stringify(decoded));
+    return decoded;
   } catch (error) {
+    console.error('Error decoding token:', error);
     return null;
   }
 }
@@ -174,30 +178,46 @@ switch (serviceName) {
       const user = extractUserFromToken(req);
       const data = getServiceData();
       
+      console.log('Handling /api/v1/vehicles request');
+      console.log('Service data available:', Object.keys(data));
+      console.log('Vehicle data count:', Object.keys(data.vehicleData || {}).length);
+      
       // Filter vehicles based on user role and ownership
       let vehicles = [];
       
       if (user) {
-        if (user.roles.includes('system_administrator')) {
+        console.log(`User authenticated as ${user.sub} with roles:`, user.roles);
+        
+        // Normalize roles for case-insensitive matching
+        const userRoles = user.roles.map(role => role.toLowerCase());
+        
+        if (userRoles.includes('system_administrator') || userRoles.includes('admin')) {
           // Admins see all vehicles
+          console.log('User is admin, showing all vehicles');
           vehicles = Object.values(data.vehicleData);
-        } else if (user.roles.includes('vehicle_owner')) {
+        } else if (userRoles.includes('vehicle_owner')) {
           // Vehicle owners see only their vehicles
+          console.log(`Filtering vehicles for owner ${user.sub}`);
           vehicles = Object.values(data.vehicleData).filter(v => v.owner === user.sub);
-        } else if (user.roles.includes('fleet_manager')) {
-          // Fleet managers see vehicles in their fleets (simplified)
+          console.log(`Found ${vehicles.length} vehicles for owner ${user.sub}`);
+        } else if (userRoles.includes('fleet_manager')) {
+          // Fleet managers see vehicles in their fleets
+          console.log('User is fleet manager');
           vehicles = Object.values(data.vehicleData);
-        } else if (user.roles.includes('service_technician')) {
+        } else if (userRoles.includes('service_technician')) {
           // Technicians see basic vehicle data
-          vehicles = Object.values(data.vehicleData).map(v => {
-            return {
-              vin: v.vin,
-              make: v.make,
-              model: v.model,
-              year: v.year
-            };
-          });
+          console.log('User is service technician');
+          vehicles = Object.values(data.vehicleData).map(v => ({
+            vin: v.vin,
+            make: v.make,
+            model: v.model,
+            year: v.year
+          }));
+        } else {
+          console.log(`Unrecognized roles: ${user.roles.join(', ')}`);
         }
+      } else {
+        console.log('No user found in request');
       }
       
       res.json({ vehicles });
