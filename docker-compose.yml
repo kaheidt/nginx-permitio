@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  nginx-api-gateway:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    environment:
+      - PERMIT_API_KEY=${PERMIT_API_KEY}
+      - PERMIT_PDP_URL=${PERMIT_PDP_URL}
+      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT}
+      - VEHICLE_TELEMETRY_SERVICE_URL=${VEHICLE_TELEMETRY_SERVICE_URL}
+      - MAINTENANCE_SERVICE_URL=${MAINTENANCE_SERVICE_URL}
+      - FLEET_MANAGEMENT_SERVICE_URL=${FLEET_MANAGEMENT_SERVICE_URL}
+      - DRIVER_ANALYTICS_SERVICE_URL=${DRIVER_ANALYTICS_SERVICE_URL}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+    depends_on:
+      - auth-service
+      - vehicle-telemetry
+      - maintenance-service
+      - fleet-management
+      - driver-analytics
+
+  auth-service:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.auth
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_ISSUER=${AUTH_ISSUER}
+      - AUTH_AUDIENCE=${AUTH_AUDIENCE}
+      - PERMIT_API_KEY=${PERMIT_API_KEY}
+      - PERMIT_PDP_URL=${PERMIT_PDP_URL}
+      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT}
+    ports:
+      - "3000:3000"
+
+  vehicle-telemetry:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+    environment:
+      - SERVICE_NAME=vehicle-telemetry
+      - PORT=3001
+    ports:
+      - "3001:3001"
+
+  maintenance-service:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+    environment:
+      - SERVICE_NAME=maintenance-service
+      - PORT=3002
+    ports:
+      - "3002:3002"
+
+  fleet-management:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+    environment:
+      - SERVICE_NAME=fleet-management
+      - PORT=3003
+    ports:
+      - "3003:3003"
+
+  driver-analytics:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.api
+    environment:
+      - SERVICE_NAME=driver-analytics
+      - PORT=3004
+    ports:
+      - "3004:3004"
