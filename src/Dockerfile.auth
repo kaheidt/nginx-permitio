@@ -10,7 +10,7 @@ RUN npm install
 COPY services/auth/ ./
 
 # Install Permit.io SDK
-RUN npm install permit-node --save
+RUN npm install permitio --save
 
 # Set environment variables
 ENV NODE_ENV=production

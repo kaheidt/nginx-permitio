@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const jwt = require('jsonwebtoken');
-const { Permit } = require('permit-node');
+const { Permit } = require('permitio');
 
 // Load environment variables
 require('dotenv').config();
