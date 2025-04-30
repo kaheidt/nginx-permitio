@@ -339,12 +339,41 @@ You can test your authorization policies using curl commands:
 # Login to get a token
 curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "johndoe", "password": "password123"}'
+  -d '{"username": "newuser", "password": "2025DEVChallenge"}'
 
 # Use the token to access protected resources
 curl -X GET http://localhost:8080/api/v1/vehicles \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
+
+### Authorization Enforcement Difference
+
+A key aspect of this architecture is understanding how authorization enforcement changes the behavior of your API. The following example shows a request that would work without Permit.io authorization but would be blocked with proper authorization in place:
+
+```bash
+# Assuming "newuser" is a vehicle owner with access only to their own vehicles (VIN123456789, VIN987654321)
+# First, get a token
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "2025DEVChallenge"}'
+
+# Then, attempt to access a vehicle they don't own
+curl -X GET http://localhost:8080/api/v1/vehicles/VIN-NOT-OWNED-BY-USER \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+**Behavior without authorization (or with bypass enabled):**
+- Request is forwarded to the backend service
+- Data is returned if the backend doesn't implement its own access controls
+- No centralized enforcement of access policies
+
+**Behavior with Permit.io authorization enabled:**
+- Request is intercepted by the NGINX gateway
+- Permit.io evaluates the authorization policy: `vehicle_owner can read vehicle where resource.owner_id == user.id`
+- Request is rejected with a 403 Forbidden response since the user doesn't own the vehicle
+- Detailed reason is logged in the Permit.io audit logs
+
+This demonstrates the value of API-first authorization: consistent access control at the API gateway layer without requiring each backend service to implement authorization logic.
 
 ### Authorization Testing Scenarios
 
