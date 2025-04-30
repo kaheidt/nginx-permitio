@@ -49,6 +49,24 @@ const mockData = {
             longitude: -74.0060
           }
         }
+      },
+      'VIN555666777': {
+        vin: 'VIN555666777',
+        make: 'Toyota',
+        model: 'Prius Prime',
+        year: 2025,
+        owner: 'vehicle-owner-2',
+        telemetry: {
+          odometer: 3456,
+          batteryLevel: 82,
+          tirePressure: [35, 35, 34, 35],
+          engineHealth: 'excellent',
+          lastUpdated: '2025-04-30T09:45:12Z',
+          location: {
+            latitude: 34.0522,
+            longitude: -118.2437
+          }
+        }
       }
     }
   },

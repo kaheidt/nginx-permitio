@@ -33,6 +33,16 @@ const users = {
     tenantId: 'personal-vehicles',
     vehicles: ['VIN123456789', 'VIN987654321']
   },
+  'vehicle-owner-2': {
+    id: 'vehicle-owner-2',
+    username: 'vehicleowner2',
+    password: '2025DEVChallenge',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    roles: ['vehicle_owner'],
+    tenantId: 'personal-vehicles',
+    vehicles: ['VIN555666777']
+  },
   'service-tech-1': {
     id: 'service-tech-1',
     username: 'alicesmith',

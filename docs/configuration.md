@@ -375,6 +375,50 @@ curl -X GET http://localhost:8080/api/v1/vehicles/VIN-NOT-OWNED-BY-USER \
 
 This demonstrates the value of API-first authorization: consistent access control at the API gateway layer without requiring each backend service to implement authorization logic.
 
+### Authorization Cross-User Testing
+
+With our system configuration, we can demonstrate a key aspect of API-first authorization: enforcing access boundaries between different users with the same role. We can use the two vehicle owner accounts to illustrate this:
+
+```bash
+# Step 1: First vehicle owner logs in and gets their token
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "2025DEVChallenge"}'
+# Save the returned token as OWNER1_TOKEN
+
+# Step 2: Try to access vehicle-owner-1's vehicle (should succeed)
+curl -X GET http://localhost:8080/api/v1/vehicles/VIN123456789 \
+  -H "Authorization: Bearer $OWNER1_TOKEN"
+# Returns vehicle data since this user owns this vehicle
+
+# Step 3: Try to access vehicle-owner-2's vehicle (should fail with proper authorization)
+curl -X GET http://localhost:8080/api/v1/vehicles/VIN555666777 \
+  -H "Authorization: Bearer $OWNER1_TOKEN"
+# With Permit.io integration enabled: Returns 403 Forbidden
+# With Permit.io integration bypassed: May return the data despite not being authorized
+
+# Step 4: Second vehicle owner logs in and gets their token
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "vehicleowner2", "password": "2025DEVChallenge"}'
+# Save the returned token as OWNER2_TOKEN
+
+# Step 5: Try to access vehicle-owner-2's vehicle (should succeed)
+curl -X GET http://localhost:8080/api/v1/vehicles/VIN555666777 \
+  -H "Authorization: Bearer $OWNER2_TOKEN"
+# Returns vehicle data since this user owns this vehicle
+
+# Step 6: Try to access vehicle-owner-1's vehicle (should fail with proper authorization)
+curl -X GET http://localhost:8080/api/v1/vehicles/VIN123456789 \
+  -H "Authorization: Bearer $OWNER2_TOKEN"
+# With Permit.io integration enabled: Returns 403 Forbidden
+# With Permit.io integration bypassed: May return the data despite not being authorized
+```
+
+This example demonstrates how the NGINX-Permit.io integration enforces fine-grained access control at the API gateway level. Each vehicle owner can only access their own vehicles, and the system blocks attempts to access other users' resources - even when they have the same role.
+
+Without API-first authorization at the gateway level, these kinds of security checks would have to be implemented consistently across all backend services, creating a higher risk of security vulnerabilities.
+
 ### Authorization Testing Scenarios
 
 Test these common scenarios to validate your policies:

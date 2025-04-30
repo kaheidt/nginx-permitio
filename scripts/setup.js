@@ -588,7 +588,7 @@ async function setupUsers() {
       first_name: 'New',
       last_name: 'User',
       attributes: {
-        id: 'newuser',
+        id: 'vehicle-owner-1',
         vehicles: ['VIN123456789', 'VIN987654321']
       }
     };
@@ -605,6 +605,33 @@ async function setupUsers() {
     log('✓ Assigned new user to vehicle_owner role');
   } catch (error) {
     handleError(error, 'New user setup');
+  }
+  
+  // Create a second vehicle owner
+  try {
+    const secondVehicleOwner = {
+      key: 'vehicle-owner-2',
+      email: 'vehicleowner2@example.com',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      attributes: {
+        id: 'vehicle-owner-2',
+        vehicles: ['VIN555666777']
+      }
+    };
+
+    await permit.api.users.create(secondVehicleOwner);
+    log('✓ Created second vehicle owner user');
+
+    // Assign vehicle owner role
+    await permit.api.users.assignRole({
+      user: 'vehicle-owner-2',
+      role: 'vehicle_owner',
+      tenant: 'personal-vehicles'
+    });
+    log('✓ Assigned second vehicle owner to vehicle_owner role');
+  } catch (error) {
+    handleError(error, 'Second vehicle owner user setup');
   }
 
   // Create a service technician
