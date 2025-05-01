@@ -80,8 +80,9 @@ function internal_auth_check(r) {
     const userId = extractUserFromToken(token);
     const firstName = extractFirstNameFromToken(token) || 'Unknown';
     const lastName = extractLastNameFromToken(token) || 'User';
+    const tenantId = extractTenantFromToken(token);
     
-    r.log(`Authorization check for user=${userId} action=${action} resource=${resource} resourceId=${resourceId}`);
+    r.log(`Authorization check for user=${userId} action=${action} resource=${resource} resourceId=${resourceId} tenantId=${tenantId}`);
     
     // Select the service URL based on debug mode or production
     const useEchoService = false; // Change to true for debugging with echo service
@@ -122,7 +123,8 @@ function internal_auth_check(r) {
         action: action,
         resource: {
             type: resource,
-            key: resourceId || resource
+            key: resourceId || resource,
+            tenant: tenantId
         }
     });
     
@@ -146,7 +148,7 @@ function internal_auth_check(r) {
                 try {
                     const jsonData = JSON.parse(data);
                     
-                    if (jsonData && jsonData.allowed === true) {
+                    if (jsonData && jsonData.allow === true) {
                         r.log(`Access allowed for user=${userId} to ${resource}:${resourceId}`);
                         r.return(200, JSON.stringify({ allow: true }));
                     } else {
@@ -185,6 +187,18 @@ function extractUserFromToken(token) {
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const payload = JSON.parse(atob(base64));
         return payload.sub || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+// Helper function to extract tenant ID from JWT token
+function extractTenantFromToken(token) {   
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
+        return payload.tenant_id || '';
     } catch (e) {
         return '';
     }
