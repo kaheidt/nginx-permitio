@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  api-gateway-network:
+    driver: bridge
+
 services:
   nginx-api-gateway:
     build:
@@ -11,31 +15,64 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d
     environment:
       - PERMIT_API_KEY=${PERMIT_API_KEY}
-      - PERMIT_PDP_URL=${PERMIT_PDP_URL}
-      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT}
-      - VEHICLE_TELEMETRY_SERVICE_URL=${VEHICLE_TELEMETRY_SERVICE_URL}
-      - MAINTENANCE_SERVICE_URL=${MAINTENANCE_SERVICE_URL}
-      - FLEET_MANAGEMENT_SERVICE_URL=${FLEET_MANAGEMENT_SERVICE_URL}
-      - DRIVER_ANALYTICS_SERVICE_URL=${DRIVER_ANALYTICS_SERVICE_URL}
-      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+      - PERMIT_LOCAL_PDP_URL=http://pdp-sidecar:7000
+      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT:-dev}
+      - VEHICLE_TELEMETRY_SERVICE_URL=http://vehicle-telemetry:3001
+      - MAINTENANCE_SERVICE_URL=http://maintenance-service:3002
+      - FLEET_MANAGEMENT_SERVICE_URL=http://fleet-management:3003
+      - DRIVER_ANALYTICS_SERVICE_URL=http://driver-analytics:3004
+      - AUTH_SERVICE_URL=http://auth-service:3000
+    networks:
+      - api-gateway-network
     depends_on:
+      - pdp-sidecar
       - auth-service
       - vehicle-telemetry
       - maintenance-service
       - fleet-management
       - driver-analytics
 
+  echo:
+    image: mendhak/http-https-echo:latest
+    networks:
+      - api-gateway-network
+    ports:
+      - "8282:8080"
+
+  # Permit.io PDP Sidecar container for local authorization decisions
+  pdp-sidecar:
+    image: permitio/pdp-v2:latest
+    environment:
+      - PDP_API_KEY=${PERMIT_API_KEY}
+      - PDP_LISTENER_URL=0.0.0.0:7000
+      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT:-dev}
+      - PDP_DEBUG=true
+      - PDP_LOG_LEVEL=debug
+    networks:
+      - api-gateway-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "7000:7000"
+      - "8181:8181"
+
   auth-service:
     build:
       context: ./src
       dockerfile: Dockerfile.auth
     environment:
-      - AUTH_SECRET=${AUTH_SECRET}
-      - AUTH_ISSUER=${AUTH_ISSUER}
-      - AUTH_AUDIENCE=${AUTH_AUDIENCE}
+      - AUTH_SECRET=${AUTH_SECRET:-mysecret123}
+      - AUTH_ISSUER=${AUTH_ISSUER:-autosecure-api}
+      - AUTH_AUDIENCE=${AUTH_AUDIENCE:-api-users}
       - PERMIT_API_KEY=${PERMIT_API_KEY}
-      - PERMIT_PDP_URL=${PERMIT_PDP_URL}
-      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT}
+      - PERMIT_LOCAL_PDP_URL=http://pdp-sidecar:7000
+      - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT:-dev}
+    networks:
+      - api-gateway-network
     ports:
       - "3000:3000"
 
@@ -49,6 +86,8 @@ services:
     environment:
       - SERVICE_NAME=vehicle-telemetry
       - PORT=3001
+    networks:
+      - api-gateway-network
     ports:
       - "3001:3001"
   
@@ -62,6 +101,8 @@ services:
     environment:
       - SERVICE_NAME=maintenance-service
       - PORT=3002
+    networks:
+      - api-gateway-network
     ports:
       - "3002:3002"
   
@@ -75,6 +116,8 @@ services:
     environment:
       - SERVICE_NAME=fleet-management
       - PORT=3003
+    networks:
+      - api-gateway-network
     ports:
       - "3003:3003"
   
@@ -88,5 +131,7 @@ services:
     environment:
       - SERVICE_NAME=driver-analytics
       - PORT=3004
+    networks:
+      - api-gateway-network
     ports:
       - "3004:3004"

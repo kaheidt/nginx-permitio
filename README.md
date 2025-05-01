@@ -86,6 +86,7 @@ For a detailed explanation of our authorization model, see the [Authorization Mo
 - Docker and Docker Compose
 - Permit.io account (free tier available)
 - Node.js (v14 or higher) for development
+- For AWS deployment: AWS account, AWS CLI, and Terraform
 
 ### Quick Start
 
@@ -165,6 +166,70 @@ This will automatically create all resources, roles, policies, tenants, and exam
 Alternatively, you can manually configure your authorization model through the Permit.io dashboard by following the steps in our [Configuration Guide](docs/configuration.md).
 
 For detailed setup instructions for either option, see our [Configuration Guide](docs/configuration.md).
+
+## Cloud Deployment
+
+### AWS Deployment with Terraform
+
+This project includes a comprehensive Terraform setup to deploy the NGINX-Permit.io authorization gateway to AWS using:
+
+- Amazon VPC with public and private subnets
+- Amazon ECS Fargate for containerized services
+- Application Load Balancer for traffic distribution
+- AWS Secrets Manager for secure credential storage
+- Amazon ECR for container images
+
+#### Deployment Steps
+
+1. Install prerequisites:
+   - [AWS CLI](https://aws.amazon.com/cli/)
+   - [Terraform](https://www.terraform.io/downloads.html)
+   - [Docker](https://www.docker.com/get-started)
+
+2. Configure AWS credentials:
+   ```bash
+   aws configure
+   ```
+
+3. Prepare Terraform variables:
+   ```bash
+   cd terraform
+   cp terraform.tfvars.example terraform.tfvars
+   # Edit terraform.tfvars with your settings, including Permit.io API key
+   ```
+
+4. Initialize and apply Terraform:
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+5. Deploy Docker images:
+   - On Linux/macOS:
+     ```bash
+     cd ../scripts
+     chmod +x deploy.sh
+     ./deploy.sh
+     ```
+   - On Windows:
+     ```powershell
+     cd ..\scripts
+     .\deploy.ps1
+     ```
+
+6. Access your deployed application:
+   ```bash
+   cd ../terraform
+   terraform output load_balancer_dns
+   ```
+
+7. To destroy the infrastructure when no longer needed:
+   ```bash
+   terraform destroy
+   ```
+
+For detailed AWS deployment instructions and architecture, see our [AWS Deployment Guide](docs/aws-deployment.md).
 
 ## API Documentation
 

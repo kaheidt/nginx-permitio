@@ -6,11 +6,11 @@ ARG SERVICE_NAME
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY services/${SERVICE_NAME}/package*.json ./
+COPY src/services/${SERVICE_NAME}/package*.json ./
 RUN npm install
 
 # Copy service code
-COPY services/${SERVICE_NAME}/ ./
+COPY src/services/${SERVICE_NAME}/ ./
 
 # Set environment variables
 ENV NODE_ENV=production

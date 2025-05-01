@@ -583,7 +583,7 @@ async function setupUsers() {
   // Create a regular user (vehicle owner)
   try {
     const newUser = {
-      key: 'newuser',
+      key: 'vehicle-owner-1',
       email: 'newuser@example.com',
       first_name: 'New',
       last_name: 'User',

@@ -1,0 +1,20 @@
+aws_region = "us-east-1"
+project_name = "nginx-permitio"
+environment = "dev"
+
+# VPC Configuration
+# Option 1: Create new VPC (default)
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
+
+# Option 2: Use existing VPC
+# use_existing_vpc = true
+# existing_vpc_id = "vpc-01234567890abcdef"
+# existing_public_subnet_ids = ["subnet-01234567890abcdef", "subnet-01234567890abcdeg"]
+# existing_private_subnet_ids = ["subnet-01234567890abcdeh", "subnet-01234567890abcdei"]
+
+# Replace these with your actual values and save as terraform.tfvars
+# permit_api_key = "your_permit_io_api_key"
+# auth_secret = "your_auth_service_secret"

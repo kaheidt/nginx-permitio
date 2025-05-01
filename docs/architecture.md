@@ -15,32 +15,29 @@ This approach ensures consistent enforcement of access control policies across a
 ## Architecture Diagram
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│    Frontend     │────▶│   NGINX with    │────▶│  Microservices  │
-│   Applications  │     │  Permit.io NJS  │     │                 │
-│                 │     │                 │     │                 │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 │
-                                 ▼
-                      ┌─────────────────────┐
-                      │                     │
-                      │    Permit.io PDP    │
-                      │  (Policy Decision   │
-                      │       Point)        │
-                      │                     │
-                      └─────────────────────┘
-                                 ▲
-                                 │
-                                 │
-                      ┌─────────────────────┐
-                      │                     │
-                      │    Permit.io PAP    │
-                      │   (Policy Admin     │
-                      │      Point)         │
-                      │                     │
-                      └─────────────────────┘
+┌─────────────────┐     ┌─────────────────────────────────────┐     ┌─────────────────┐
+│                 │     │                                     │     │                 │
+│    Frontend     │────▶│   NGINX with Permit.io NJS Module   │────▶│  Microservices  │
+│   Applications  │     │                                     │     │                 │
+│                 │     └─────────────────┬───────────────────┘     └─────────────────┘
+└─────────────────┘                       │
+                                          │
+                                          ▼
+                           ┌────────────────────────────┐
+                           │                            │
+                           │     Local PDP Sidecar      │
+                           │ (Policy Decision Point)    │
+                           │                            │
+                           └────────────┬───────────────┘
+                                        │
+                                        │
+                                        ▼
+                           ┌────────────────────────────┐
+                           │                            │
+                           │     Permit.io PAP Cloud    │
+                           │ (Policy Administration)    │
+                           │                            │
+                           └────────────────────────────┘
 ```
 
 ## Key Components
@@ -51,7 +48,7 @@ The NGINX API Gateway acts as a Policy Enforcement Point (PEP) using the NGINX J
 
 - Intercepts all API requests
 - Extracts authorization context (user, action, resource)
-- Makes authorization decisions via Permit.io PDP
+- Makes authorization decisions via the local PDP sidecar
 - Routes allowed requests to the appropriate backend service
 - Returns 403 Forbidden responses for denied requests
 
@@ -60,22 +57,22 @@ The NGINX API Gateway acts as a Policy Enforcement Point (PEP) using the NGINX J
 - NGINX JavaScript (NJS) module
 - JWT Authentication
 
-### 2. Permit.io Integration
+### 2. Local PDP Sidecar
 
-The Permit.io integration provides:
+The Permit.io integration now uses a local sidecar container for Policy Decision Point (PDP) functionality:
 
-- Cloud-hosted Policy Decision Point (PDP)
-- User and role synchronization
-- Centralized policy management
-- Real-time policy updates
-- Audit logs for all authorization decisions
+- **Performance Benefits:** Reduced latency for authorization decisions by avoiding network calls to external services
+- **Reliability:** Authorization decisions can be made even if internet connectivity is temporarily interrupted
+- **Synchronization:** Automatically syncs with Permit.io cloud to get the latest policies
+- **Security:** Keeps authorization decision-making within your infrastructure
+- **Caching:** Caches authorization decisions to improve performance
 
 **How Authorization Works:**
 
 1. The gateway extracts the JWT token from the Authorization header
 2. User information is decoded from the JWT token
 3. Resource and action are determined from the URL path and HTTP method
-4. A request is made to Permit.io PDP to check permissions
+4. A request is made to the local PDP sidecar to check permissions
 5. The PDP returns allow/deny decision based on policies
 6. The gateway enforces the decision
 
@@ -126,8 +123,8 @@ The authorization model is based on a combination of:
 3. **Authorization:**
    - NGINX extracts JWT and decodes user information
    - NGINX determines resource and action from URL path and method
-   - NGINX sends authorization check to Permit.io PDP
-   - Permit.io evaluates policies and returns decision
+   - NGINX sends authorization check to local PDP sidecar
+   - PDP evaluates policies and returns decision
 
 4. **Request Processing:**
    - If authorized, request is forwarded to backend service
@@ -143,17 +140,19 @@ The authorization model is based on a combination of:
 - **Audit Trail:** Comprehensive logging of all authorization decisions
 - **Reduced Developer Burden:** Developers don't need to implement authorization logic
 - **Improved Security:** Consistent enforcement reduces risk of policy bypass
+- **Lower Latency:** Local PDP sidecar reduces authorization decision time
+- **Higher Availability:** Authorization still functions during temporary connectivity issues
+- **Reduced Egress Traffic:** No outbound traffic for authorization decisions
 
 ## Scalability Considerations
 
-- NGINX can be horizontally scaled behind a load balancer
-- Permit.io PDP is a cloud service that scales automatically
+- NGINX and PDP sidecar can be horizontally scaled within each ECS task
+- Permit.io cloud connectivity is only needed for policy updates, not for enforcement
 - Backend services can be scaled independently based on demand
 
 ## Future Enhancements
 
 - Integration with OAuth 2.0 Authorization Server
 - Support for delegated authorization (on behalf of)
-- Caching of authorization decisions for improved performance
-- Custom policy extensions for automotive-specific requirements
 - Enhanced monitoring and analytics for authorization decisions
+- Custom policy extensions for automotive-specific requirements
