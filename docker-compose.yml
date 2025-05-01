@@ -31,6 +31,7 @@ services:
       - maintenance-service
       - fleet-management
       - driver-analytics
+      - echo
 
   echo:
     image: mendhak/http-https-echo:latest
@@ -81,8 +82,6 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile.api
-      args:
-        - SERVICE_NAME=api
     environment:
       - SERVICE_NAME=vehicle-telemetry
       - PORT=3001
@@ -96,8 +95,6 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile.api
-      args:
-        - SERVICE_NAME=api
     environment:
       - SERVICE_NAME=maintenance-service
       - PORT=3002
@@ -111,8 +108,6 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile.api
-      args:
-        - SERVICE_NAME=api
     environment:
       - SERVICE_NAME=fleet-management
       - PORT=3003
@@ -126,8 +121,6 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile.api
-      args:
-        - SERVICE_NAME=api
     environment:
       - SERVICE_NAME=driver-analytics
       - PORT=3004

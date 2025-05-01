@@ -84,7 +84,7 @@ function internal_auth_check(r) {
     r.log(`Authorization check for user=${userId} action=${action} resource=${resource} resourceId=${resourceId}`);
     
     // Select the service URL based on debug mode or production
-    const useEchoService = true; // Change to true for debugging with echo service
+    const useEchoService = false; // Change to true for debugging with echo service
     
     let serviceUrl = '';
     if (useEchoService) {

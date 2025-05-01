@@ -1,20 +1,16 @@
 FROM node:16-alpine
 
-# Define build arguments
-ARG SERVICE_NAME
-
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY src/services/${SERVICE_NAME}/package*.json ./
+COPY services/api/package*.json ./
 RUN npm install
 
 # Copy service code
-COPY src/services/${SERVICE_NAME}/ ./
+COPY services/api/ ./
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV SERVICE_NAME=${SERVICE_NAME}
 ENV PORT=3000
 
 # Expose the service port
