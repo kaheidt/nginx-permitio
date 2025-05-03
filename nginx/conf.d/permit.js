@@ -37,11 +37,13 @@ function internal_auth_check(r) {
     // Extract resource identifiers from path
     let resource = '';
     let resourceId = '';
+    let resourceAttributes = {};
     
     if (path.includes('/vehicles')) {
         resource = 'vehicle';
         const match = path.match(/\/vehicles\/([^\/]+)/);
         resourceId = match ? match[1] : '';
+        resourceAttributes = { vehicle_ids: [resourceId] };
     } else if (path.includes('/maintenance')) {
         resource = 'maintenance';
         const match = path.match(/\/maintenance\/([^\/]+)/);
@@ -123,7 +125,8 @@ function internal_auth_check(r) {
         action: action,
         resource: {
             type: resource,
-            key: resourceId || resource,
+            //key: resourceId || resource,
+            attributes: resourceAttributes,
             tenant: tenantId
         }
     });
