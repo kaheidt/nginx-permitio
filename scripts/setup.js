@@ -76,6 +76,87 @@ const handleError = (error, step) => {
 };
 
 /**
+ * Helper function to make API calls to Permit.io
+ * @param {string} endpoint - API endpoint
+ * @param {string} method - HTTP method
+ * @param {Object} data - Request body
+ * @param {string} operation - Description of operation for error handling
+ */
+async function makeApiCall(endpoint, method, data, operation) {
+  try {
+    const apiKey = args.apiKey || process.env.PERMIT_API_KEY;
+    const environment = args.environment || process.env.PERMIT_ENVIRONMENT || 'dev';
+    const project = args.project || process.env.PERMIT_PROJECT || 'nginx';
+
+    const url = `https://api.permit.io/v2${endpoint.replace('{project}', project).replace('{environment}', environment)}`;
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+      const result = await response.json().catch(() => ({}));
+      return { success: true, data: result };
+    } else {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      return { 
+        success: false, 
+        status: response.status, 
+        message: errorData.message || `Failed during ${operation}`,
+        data: errorData
+      };
+    }
+  } catch (error) {
+    return { 
+      success: false, 
+      status: 500, 
+      message: error.message || `API request failed for ${operation}`
+    };
+  }
+}
+
+/**
+ * Generic function to create or update an entity using the Permit SDK
+ * @param {string} entityType - The type of entity (resource, role, etc.)
+ * @param {string} key - The entity key
+ * @param {Object} entity - The entity object
+ * @param {Function} getFunc - SDK function to get entity
+ * @param {Function} createFunc - SDK function to create entity
+ * @param {Function} updateFunc - SDK function to update entity
+ */
+async function createOrUpdateEntity(entityType, key, entity, getFunc, createFunc, updateFunc) {
+  try {
+    let existing = null;
+    try {
+      existing = await getFunc(key);
+      log(`${entityType} ${key} already exists, updating...`);
+    } catch (error) {
+      if (error.status !== 404) {
+        throw error;
+      }
+    }
+
+    if (existing) {
+      await updateFunc(key, entity);
+      log(`✓ Updated ${entityType}: ${key}`);
+    } else {
+      await createFunc(key, entity);
+      log(`✓ Created ${entityType}: ${key}`);
+    }
+    return true;
+  } catch (error) {
+    handleError(error, `${entityType} setup for ${key}`);
+    return false;
+  }
+}
+
+/**
  * Display help information
  */
 function displayHelp() {
@@ -146,66 +227,27 @@ async function setupUserAttributes() {
 
     // Create or update each user attribute using direct API calls
     for (const attr of userAttributes) {
-      try {
-        // Make a direct API call to create the attribute
-        const createResponse = await fetch(`https://api.permit.io/v2/schema/${project}/${environment}/users/attributes`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(attr)
-        });
-
-        if (createResponse.ok) {
-          log(`✓ Created user attribute: ${attr.key} (${attr.type})`);
-        } else {
-          const createData = await createResponse.json().catch(() => ({ message: 'Unknown error' }));
-          
-          // SKIP trying to update the user attributes, there's something wrong with the API side
-/*
-          // If attribute exists (409 Conflict), try to update it
-          if (createResponse.status === 409) {
-
-            const objClone = { ...attr };
-            if ('key' in objClone) {
-                // @ts-ignore
-                delete objClone.key;
-            }
-
-            const updateResponse = await fetch(`https://api.permit.io/v2/schema/${project}/${environment}/users/attributes/${attr.key}`, {
-              method: 'PATCH',
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(objClone)
-            });
-
-            if (updateResponse.ok) {
-              log(`✓ Updated user attribute: ${attr.key} (${attr.type})`);
-            } else {
-              const updateData = await updateResponse.json().catch(() => ({ message: 'Unknown error' }));
-              handleError({ 
-                status: updateResponse.status, 
-                message: updateData.message || `Failed to update attribute: ${attr.key}`, 
-                data: updateData 
-              }, `User attribute update for ${attr.key}`);
-            }
-          } else {
-            handleError({ 
-              status: createResponse.status, 
-              message: createData.message || `Failed to create attribute: ${attr.key}`, 
-              data: createData 
-            }, `User attribute creation for ${attr.key}`);
-          }
-              */
-        }
-      } catch (error) {
+      const result = await makeApiCall(
+        `/schema/{project}/{environment}/users/attributes`, 
+        'POST', 
+        attr, 
+        `User attribute creation for ${attr.key}`
+      );
+      
+      if (result.success) {
+        log(`✓ Created user attribute: ${attr.key} (${attr.type})`);
+      } else if (result.status === 409) {
+        log(`User attribute ${attr.key} already exists`);
+        
+        // SKIP trying to update the user attributes, there's something wrong with the API side
+        // If we wanted to update, we would use:
+        // Removed update code as it's currently disabled
+      } else {
         handleError({ 
-          status: 500, 
-          message: error.message || `API request failed for ${attr.key}` 
-        }, `API request for user attribute ${attr.key}`);
+          status: result.status, 
+          message: result.message, 
+          data: result.data 
+        }, `User attribute creation for ${attr.key}`);
       }
     }
     log('✓ User attributes setup complete');
@@ -224,11 +266,6 @@ async function setupConditionSets() {
   log('Setting up condition sets...');
 
   try {
-    // Get the API key, project and environment
-    const apiKey = args.apiKey || process.env.PERMIT_API_KEY;
-    const environment = args.environment || process.env.PERMIT_ENVIRONMENT || 'dev';
-    const project = args.project || process.env.PERMIT_PROJECT || 'nginx';
-
     // Define the condition set for vehicle ownership
     const ownerOfVehicleCondition = {
       key: "owner_of_vehicle",
@@ -254,33 +291,23 @@ async function setupConditionSets() {
       }
     };
 
-    // Make a direct API call to create the condition set
-    const createResponse = await fetch(`https://api.permit.io/v2/schema/${project}/${environment}/condition_sets`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(ownerOfVehicleCondition)
-    });
+    const result = await makeApiCall(
+      `/schema/{project}/{environment}/condition_sets`, 
+      'POST', 
+      ownerOfVehicleCondition, 
+      `Condition set creation for ${ownerOfVehicleCondition.key}`
+    );
 
-    if (createResponse.ok) {
+    if (result.success) {
       log(`✓ Created condition set: ${ownerOfVehicleCondition.name}`);
+    } else if (result.status === 409) {
+      log(`Condition set ${ownerOfVehicleCondition.key} already exists`);        
     } else {
-      const createData = await createResponse.json().catch(() => ({ message: 'Unknown error' }));
-      
-      // If condition set exists (409 Conflict), try to update it
-      if (createResponse.status === 409) {
-        // For condition sets, we there is no PUT update
-        log(`Condition set ${ownerOfVehicleCondition.key} already exists`);        
-      } else {
-        handleError({ 
-          status: createResponse.status, 
-          message: createData.message || `Failed to create condition set: ${ownerOfVehicleCondition.key}`, 
-          data: createData 
-        }, `Condition set creation for ${ownerOfVehicleCondition.key}`);
-      }
+      handleError({ 
+        status: result.status, 
+        message: result.message, 
+        data: result.data 
+      }, `Condition set creation for ${ownerOfVehicleCondition.key}`);
     }
     
     log('✓ Condition sets setup complete');
@@ -299,11 +326,6 @@ async function setupRoleRules() {
   log('Setting up role rules...');
 
   try {
-    // Get the API key, project and environment
-    const apiKey = args.apiKey || process.env.PERMIT_API_KEY;
-    const environment = args.environment || process.env.PERMIT_ENVIRONMENT || 'dev';
-    const project = args.project || process.env.PERMIT_PROJECT || 'nginx';
-
     // Define the rules we want to create for vehicle owners
     const rules = [
       {
@@ -324,33 +346,21 @@ async function setupRoleRules() {
 
     // Create each rule using direct API calls
     for (const rule of rules) {
-      try {
-        // Make a direct API call to create the rule
-        const createResponse = await fetch(`https://api.permit.io/v2/facts/${project}/${environment}/set_rules`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(rule)
-        });
+      const result = await makeApiCall(
+        `/facts/{project}/{environment}/set_rules`, 
+        'POST', 
+        rule, 
+        `Rule creation for ${rule.permission}`
+      );
 
-        if (createResponse.ok) {
-          log(`✓ Created rule: ${rule.user_set} can ${rule.permission} where resource is in ${rule.resource_set}`);
-        } else {
-          const createData = await createResponse.json().catch(() => ({ message: 'Unknown error' }));
-          handleError({ 
-            status: createResponse.status, 
-            message: createData.message || `Failed to create rule: ${rule.permission}`,
-            data: createData 
-          }, `Rule creation for ${rule.permission}`);
-        }
-      } catch (error) {
-        handleError({
-          status: 500,
-          message: error.message || `API request failed for rule ${rule.permission}`
-        }, `API request for rule ${rule.permission}`);
+      if (result.success) {
+        log(`✓ Created rule: ${rule.user_set} can ${rule.permission} where resource is in ${rule.resource_set}`);
+      } else {
+        handleError({ 
+          status: result.status || 500, 
+          message: result.message || `Failed to create rule: ${rule.permission}`,
+          data: result.data 
+        }, `Rule creation for ${rule.permission}`);
       }
     }
     
@@ -364,256 +374,149 @@ async function setupRoleRules() {
 }
 
 /**
- * Main setup function
+ * Create a resource type in Permit.io
+ * @param {string} key - Resource key 
+ * @param {Object} definition - Resource definition object
  */
-async function setup() {
-  log('Starting Permit.io setup...');
-  verbose(`Using PDP URL: ${permit.config.pdp}`);
-  verbose(`Using environment: ${permit.config.environment}`);
+async function createOrUpdateResource(key, definition) {
+  return createOrUpdateEntity(
+    'Resource', 
+    key, 
+    definition, 
+    (k) => permit.api.resources.get(k),
+    (k, r) => permit.api.resources.create(k, r),
+    (k, r) => permit.api.resources.update(k, r)
+  );
+}
 
-  try {
-    // Step 0: Set up user attributes for the environment
-    await setupUserAttributes();
-    
-    // Step 0.1: Create condition sets for resource-based permissions
-    await setupConditionSets();
-    
-    // Step 1: Set up resource types with attributes
-    if (!args.skipResources) {
-      await setupresources();
-    } else {
-      log('Skipping resources setup...');
-    }
-    
-    // Step 2: Create roles
-    if (!args.skipRoles) {
-      await setupRoles();
-    } else {
-      log('Skipping roles setup...');
-    }
-    
-    // Step 2.1: Create role rules
-    await setupRoleRules();
-    
-    // Step 3: Create tenants for multi-tenancy
-    if (!args.skipTenants) {
-      await setupTenants();
-    } else {
-      log('Skipping tenants setup...');
-    }
-    
-    // Step 4: Create example users and assign roles
-    if (!args.skipUsers) {
-      await setupUsers();
-    } else {
-      log('Skipping users setup...');
-    }
-
-    log('Setup completed successfully!');
-    log('You can now use the AutoSecure API Gateway with Permit.io authorization.');
-
-  } catch (error) {
-    console.error('\x1b[31m[Setup Failed]\x1b[0m An unexpected error occurred:', error);
-    process.exit(1);
-  }
+/**
+ * Create a role in Permit.io
+ * @param {string} key - Role key 
+ * @param {Object} definition - Role definition object
+ */
+async function createOrUpdateRole(key, definition) {
+  return createOrUpdateEntity(
+    'Role', 
+    key, 
+    definition, 
+    (k) => permit.api.roles.get(k),
+    (k, r) => permit.api.roles.create(k, r),
+    (k, r) => permit.api.roles.update(k, r)
+  );
 }
 
 /**
  * Step 1: Set up resource types
  */
-async function setupresources() {
+async function setupResources() {
   log('Setting up resource types...');
 
-  // Vehicle resource
-  try {
-    // Check if resource already exists
-    let existingResource = null;
-    try {
-      existingResource = await permit.api.resources.get('vehicle');
-      log('Vehicle resource already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').ResourceType}
-     */
-    const vehicleResource = {
-      name: 'Vehicle',
-      description: 'Vehicle resource type',
-      actions: {
-        read: { name: 'Read' },
-        create: { name: 'Create' },
-        update: { name: 'Update' },
-        delete: { name: 'Delete' }
-      },
-      attributes: {
-        vin: {
-          type: 'string',
-          description: 'Vehicle Identification Number'
+  // Define all resources with their configurations
+  const resources = [
+    {
+      key: 'vehicle',
+      definition: {
+        name: 'Vehicle',
+        description: 'Vehicle resource type',
+        actions: {
+          read: { name: 'Read' },
+          create: { name: 'Create' },
+          update: { name: 'Update' },
+          delete: { name: 'Delete' }
         },
-        owner_id: {
-          type: 'string',
-          description: 'ID of the vehicle owner'
-        },
-        fleet_id: {
-          type: 'string',
-          description: 'ID of the fleet this vehicle belongs to'
-        },
-        vehicle_ids: {
-          type: 'array',
-          description: 'IDs that identify this vehicle'
+        attributes: {
+          vin: {
+            type: 'string',
+            description: 'Vehicle Identification Number'
+          },
+          owner_id: {
+            type: 'string',
+            description: 'ID of the vehicle owner'
+          },
+          fleet_id: {
+            type: 'string',
+            description: 'ID of the fleet this vehicle belongs to'
+          },
+          vehicle_ids: {
+            type: 'array',
+            description: 'IDs that identify this vehicle'
+          }
         }
       }
-    };
-
-    if (existingResource) {
-      await permit.api.resources.update('vehicle', vehicleResource);
-    } else {
-      await permit.api.resources.create('vehicle', vehicleResource);
-    }
-    log('✓ Vehicle resource setup complete');
-  } catch (error) {
-    handleError(error, 'Vehicle resource setup');
-  }
-
-  // Maintenance resource
-  try {
-    // Check if resource already exists
-    let existingResource = null;
-    try {
-      existingResource = await permit.api.resources.get('maintenance');
-      log('Maintenance resource already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').ResourceType}
-     */
-    const maintenanceResource = {
-      name: 'Maintenance',
-      description: 'Maintenance record for vehicles',
-      actions: {
-        read: { name: 'Read' },
-        create: { name: 'Create' },
-        update: { name: 'Update' },
-        delete: { name: 'Delete' }
-      },
-      attributes: {
-        vehicle_vin: {
-          type: 'string',
-          description: 'VIN of the vehicle being serviced'
+    },
+    {
+      key: 'maintenance',
+      definition: {
+        name: 'Maintenance',
+        description: 'Maintenance record for vehicles',
+        actions: {
+          read: { name: 'Read' },
+          create: { name: 'Create' },
+          update: { name: 'Update' },
+          delete: { name: 'Delete' }
         },
-        technician_id: {
-          type: 'string',
-          description: 'ID of the technician performing the service'
+        attributes: {
+          vehicle_vin: {
+            type: 'string',
+            description: 'VIN of the vehicle being serviced'
+          },
+          technician_id: {
+            type: 'string',
+            description: 'ID of the technician performing the service'
+          }
         }
       }
-    };
-
-    if (existingResource) {
-      await permit.api.resources.update('maintenance', maintenanceResource);
-    } else {
-      await permit.api.resources.create('maintenance', maintenanceResource);
-    }
-    log('✓ Maintenance resource setup complete');
-  } catch (error) {
-    handleError(error, 'Maintenance resource setup');
-  }
-
-  // Fleet resource
-  try {
-    // Check if resource already exists
-    let existingResource = null;
-    try {
-      existingResource = await permit.api.resources.get('fleet');
-      log('Fleet resource already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').ResourceType}
-     */
-    const fleetResource = {
-      name: 'Fleet',
-      description: 'Fleet of vehicles',
-      actions: {
-        read: { name: 'Read' },
-        create: { name: 'Create' },
-        update: { name: 'Update' },
-        delete: { name: 'Delete' }
-      },
-      attributes: {
-        manager_id: {
-          type: 'string',
-          description: 'ID of the fleet manager'
-        }
-      }
-    };
-
-    if (existingResource) {
-      await permit.api.resources.update('fleet', fleetResource);
-    } else {
-      await permit.api.resources.create('fleet', fleetResource);
-    }
-    log('✓ Fleet resource setup complete');
-  } catch (error) {
-    handleError(error, 'Fleet resource setup');
-  }
-
-  // Analytics resource
-  try {
-    // Check if resource already exists
-    let existingResource = null;
-    try {
-      existingResource = await permit.api.resources.get('analytics');
-      log('Analytics resource already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').ResourceType}
-     */
-    const analyticsResource = {
-      name: 'Analytics',
-      description: 'Driver behavior analytics',
-      actions: {
-        read: { name: 'Read' },        
-        create: { name: 'Create' },
-        update: { name: 'Update' },
-        delete: { name: 'Delete' }
-      },
-      attributes: {
-        user_id: {
-          type: 'string',
-          description: 'ID of the user the analytics are about'
+    },
+    {
+      key: 'fleet',
+      definition: {
+        name: 'Fleet',
+        description: 'Fleet of vehicles',
+        actions: {
+          read: { name: 'Read' },
+          create: { name: 'Create' },
+          update: { name: 'Update' },
+          delete: { name: 'Delete' }
         },
-        insurance_agent_id: {
-          type: 'string',
-          description: 'ID of the insurance agent with access'
+        attributes: {
+          manager_id: {
+            type: 'string',
+            description: 'ID of the fleet manager'
+          }
         }
       }
-    };
-
-    if (existingResource) {
-      await permit.api.resources.update('analytics', analyticsResource);
-    } else {
-      await permit.api.resources.create('analytics', analyticsResource);
+    },
+    {
+      key: 'analytics',
+      definition: {
+        name: 'Analytics',
+        description: 'Driver behavior analytics',
+        actions: {
+          read: { name: 'Read' },        
+          create: { name: 'Create' },
+          update: { name: 'Update' },
+          delete: { name: 'Delete' }
+        },
+        attributes: {
+          user_id: {
+            type: 'string',
+            description: 'ID of the user the analytics are about'
+          },
+          insurance_agent_id: {
+            type: 'string',
+            description: 'ID of the insurance agent with access'
+          }
+        }
+      }
     }
-    log('✓ Analytics resource setup complete');
-  } catch (error) {
-    handleError(error, 'Analytics resource setup');
+  ];
+
+  // Create or update each resource
+  for (const resource of resources) {
+    const success = await createOrUpdateResource(resource.key, resource.definition);
+    if (success) {
+      log(`✓ ${resource.key} resource setup complete`);
+    }
   }
 }
 
@@ -623,206 +526,80 @@ async function setupresources() {
 async function setupRoles() {
   log('Setting up roles...');
 
-  // System Administrator role
-  try {
-    let existingRole = null;
-    try {
-      existingRole = await permit.api.roles.get('system_administrator');
-      log('Role system_administrator already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
+  // Define all roles with their configurations
+  const roles = [
+    {
+      key: 'system_administrator',
+      definition: {
+        name: 'System Administrator',
+        description: 'Administrator with full system access',
+        permissions: [
+          'vehicle:read', 'vehicle:create', 'vehicle:update', 'vehicle:delete',
+          'maintenance:read', 'maintenance:create', 'maintenance:update', 'maintenance:delete',
+          'fleet:read', 'fleet:create', 'fleet:update', 'fleet:delete',
+          'analytics:read', 'analytics:create', 'analytics:update', 'analytics:delete'
+        ]
+      }
+    },
+    {
+      key: 'vehicle_owner',
+      definition: {
+        name: 'Vehicle Owner',
+        description: 'Owner of one or more vehicles',
+        permissions: [
+          'maintenance:read',
+          'maintenance:create',
+          'fleet:read'
+        ]
+      }
+    },
+    {
+      key: 'fleet_manager',
+      definition: {
+        name: 'Fleet Manager',
+        description: 'Manager of vehicle fleets',
+        permissions: [
+          'fleet:read',
+          'fleet:update',
+          'vehicle:read',
+          'vehicle:update',
+          'maintenance:read',
+          'maintenance:create'
+        ]
+      }
+    },
+    {
+      key: 'service_technician',
+      definition: {
+        name: 'Service Technician',
+        description: 'Vehicle service and maintenance technician',
+        permissions: [
+          'vehicle:read',
+          'analytics:read',
+          'analytics:create',
+          'analytics:update'
+        ]
+      }
+    },
+    {
+      key: 'insurance_provider',
+      definition: {
+        name: 'Insurance Provider',
+        description: 'Vehicle insurance provider with limited access',
+        permissions: [
+          'vehicle:read',
+          'analytics:read'
+        ]
       }
     }
+  ];
 
-    /**
-     * @type {import('permitio').Role}
-     */
-    const systemAdminRole = {
-      name: 'System Administrator',
-      description: 'Administrator with full system access',
-      permissions: [
-        'vehicle:read',
-        'vehicle:create',
-        'vehicle:update',
-        'vehicle:delete',
-        'maintenance:read',
-        'maintenance:create',
-        'maintenance:update',
-        'maintenance:delete',
-        'fleet:read',
-        'fleet:create',
-        'fleet:update',
-        'fleet:delete',
-        'analytics:read',
-        'analytics:create',
-        'analytics:update',
-        'analytics:delete'
-      ]
-    };
-
-    if (existingRole) {
-      
-      const updatedRole = { ...existingRole, ...systemAdminRole };
-      await permit.api.roles.update('system_administrator', systemAdminRole);
-      log('✓ Updated role: System Administrator');
-    } else {
-      await permit.api.roles.create('system_administrator', systemAdminRole);
-      log('✓ Created role: System Administrator');
+  // Create or update each role
+  for (const role of roles) {
+    const success = await createOrUpdateRole(role.key, role.definition);
+    if (success) {
+      log(`✓ ${role.definition.name} role setup complete`);
     }
-  } catch (error) {
-    handleError(error, 'System Administrator role setup');
-  }
-
-  // Vehicle Owner role
-  try {
-    let existingRole = null;
-    try {
-      existingRole = await permit.api.roles.get('vehicle_owner');
-      log('Role vehicle_owner already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').Role}
-     */
-    const vehicleOwnerRole = {
-      name: 'Vehicle Owner',
-      description: 'Owner of one or more vehicles',
-      permissions: [
-        'maintenance:read',
-        'maintenance:create',
-        'fleet:read'
-      ]
-    };
-
-    if (existingRole) {
-      const updatedRole = { ...existingRole, ...vehicleOwnerRole };
-      await permit.api.roles.update('vehicle_owner', vehicleOwnerRole);
-      log('✓ Updated role: Vehicle Owner');
-    } else {
-      await permit.api.roles.create('vehicle_owner', vehicleOwnerRole);
-      log('✓ Created role: Vehicle Owner');
-    }
-  } catch (error) {
-    handleError(error, 'Vehicle Owner role setup');
-  }
-
-  // Fleet Manager role
-  try {
-    let existingRole = null;
-    try {
-      existingRole = await permit.api.roles.get('fleet_manager');
-      log('Role fleet_manager already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').Role}
-     */
-    const fleetManagerRole = {
-      name: 'Fleet Manager',
-      description: 'Manager of vehicle fleets',
-      permissions: [
-        'fleet:read',
-        'fleet:update',
-        'vehicle:read',
-        'vehicle:update',
-        'maintenance:read',
-        'maintenance:create'
-      ]
-    };
-
-    if (existingRole) {
-      const updatedRole = { ...existingRole, ...fleetManagerRole };
-      await permit.api.roles.update('fleet_manager', fleetManagerRole);
-      log('✓ Updated role: Fleet Manager');
-    } else {
-      await permit.api.roles.create('fleet_manager', fleetManagerRole);
-      log('✓ Created role: Fleet Manager');
-    }
-  } catch (error) {
-    handleError(error, 'Fleet Manager role setup');
-  }
-
-  // Service Technician role
-  try {
-    let existingRole = null;
-    try {
-      existingRole = await permit.api.roles.get('service_technician');
-      log('Role service_technician already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').Role}
-     */
-    const technicianRole = {
-      name: 'Service Technician',
-      description: 'Vehicle service and maintenance technician',
-      permissions: [
-        'vehicle:read',
-        'analytics:read',
-        'analytics:create',
-        'analytics:update'
-      ]
-    };
-
-    if (existingRole) {
-      const updatedRole = { ...existingRole, ...technicianRole };
-      await permit.api.roles.update('service_technician', technicianRole);
-      log('✓ Updated role: Service Technician');
-    } else {
-      await permit.api.roles.create('service_technician', technicianRole);
-      log('✓ Created role: Service Technician');
-    }
-  } catch (error) {
-    handleError(error, 'Service Technician role setup');
-  }
-
-  // Insurance Provider role
-  try {
-    let existingRole = null;
-    try {
-      existingRole = await permit.api.roles.get('insurance_provider');
-      log('Role insurance_provider already exists, updating...');
-    } catch (error) {
-      if (error.status !== 404) {
-        throw error;
-      }
-    }
-
-    /**
-     * @type {import('permitio').Role}
-     */
-    const insuranceRole = {
-      name: 'Insurance Provider',
-      description: 'Vehicle insurance provider with limited access',
-      permissions: [
-        'vehicle:read',
-        'analytics:read'
-      ]
-    };
-
-    if (existingRole) {
-      const updatedRole = { ...existingRole, ...insuranceRole };
-      await permit.api.roles.update('insurance_provider', insuranceRole);
-      log('✓ Updated role: Insurance Provider');
-    } else {
-      await permit.api.roles.create('insurance_provider', insuranceRole);
-      log('✓ Created role: Insurance Provider');
-    }
-  } catch (error) {
-    handleError(error, 'Insurance Provider role setup');
   }
 }
 
@@ -845,9 +622,6 @@ async function assignPermissionToRole(roleKey, permissions) {
 async function setupTenants() {
   log('Setting up tenants...');
 
-  /**
-   * @type {import('permitio').Tenant[]}
-   */
   const tenants = [
     {
       key: 'personal-vehicles',
@@ -909,25 +683,6 @@ async function setupTenants() {
 async function setupUsers() {
   log('Setting up example users...');
 
-  /**
-   * @typedef {Object} UserRole
-   * @property {string} role - The role key
-   * @property {string[]} tenants - Array of tenant keys where this role applies
-   */
-
-  /**
-   * @typedef {Object} UserWithRoles
-   * @property {string} key - Unique user identifier
-   * @property {string} email - User's email
-   * @property {string} first_name - User's first name
-   * @property {string} last_name - User's last name
-   * @property {Object} attributes - User attributes
-   * @property {UserRole[]} role_assignments - Roles assigned to this user
-   */
-
-  /**
-   * @type {UserWithRoles[]}
-   */
   const users = [
     {
       key: 'admin',
@@ -1066,6 +821,61 @@ async function setupUsers() {
     } catch (error) {
       handleError(error, `User setup for ${user.key}`);
     }
+  }
+}
+
+/**
+ * Main setup function
+ */
+async function setup() {
+  log('Starting Permit.io setup...');
+  verbose(`Using PDP URL: ${permit.config.pdp}`);
+  verbose(`Using environment: ${permit.config.environment}`);
+
+  try {
+    // Step 0: Set up user attributes for the environment
+    await setupUserAttributes();
+    
+    // Step 0.1: Create condition sets for resource-based permissions
+    await setupConditionSets();
+    
+    // Step 1: Set up resource types with attributes
+    if (!args.skipResources) {
+      await setupResources();
+    } else {
+      log('Skipping resources setup...');
+    }
+    
+    // Step 2: Create roles
+    if (!args.skipRoles) {
+      await setupRoles();
+    } else {
+      log('Skipping roles setup...');
+    }
+    
+    // Step 2.1: Create role rules
+    await setupRoleRules();
+    
+    // Step 3: Create tenants for multi-tenancy
+    if (!args.skipTenants) {
+      await setupTenants();
+    } else {
+      log('Skipping tenants setup...');
+    }
+    
+    // Step 4: Create example users and assign roles
+    if (!args.skipUsers) {
+      await setupUsers();
+    } else {
+      log('Skipping users setup...');
+    }
+
+    log('Setup completed successfully!');
+    log('You can now use the AutoSecure API Gateway with Permit.io authorization.');
+
+  } catch (error) {
+    console.error('\x1b[31m[Setup Failed]\x1b[0m An unexpected error occurred:', error);
+    process.exit(1);
   }
 }
 
