@@ -107,6 +107,7 @@ resource "aws_iam_role" "ecs_task_role" {
   
   # Force replacement if role already exists
   lifecycle {
+    ignore_changes = [ name ]
     create_before_destroy = true
   }
   
