@@ -8,6 +8,7 @@
  */
 require('dotenv').config({ path: '../.env' });
 const { Permit } = require('permitio');
+const fetch = require('node-fetch');
 
 // Parse command line arguments
 const args = parseCommandLineArgs();
@@ -118,6 +119,105 @@ if (!args.apiKey && !process.env.PERMIT_API_KEY) {
 }
 
 /**
+ * Step 0: Set up user attributes for the environment
+ */
+async function setupUserAttributes() {
+  log('Setting up user attributes...');
+
+  try {
+    // Define the user attributes we want to create
+    const userAttributes = [
+      {
+        key: 'vehicles',
+        type: 'array',
+        description: 'VINs of vehicles owned by the user'
+      },
+      {
+        key: 'vin_requested',
+        type: 'string',
+        description: 'VIN of the vehicle being accessed'
+      }
+    ];
+
+    // Get the API key and environment
+    const apiKey = args.apiKey || process.env.PERMIT_API_KEY;
+    const environment = args.environment || process.env.PERMIT_ENVIRONMENT || 'dev';
+    const project = args.project || process.env.PERMIT_PROJECT || 'nginx';
+
+    // Create or update each user attribute using direct API calls
+    for (const attr of userAttributes) {
+      try {
+        // Make a direct API call to create the attribute
+        const createResponse = await fetch(`https://api.permit.io/v2/schema/${project}/${environment}/users/attributes`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(attr)
+        });
+
+        if (createResponse.ok) {
+          log(`✓ Created user attribute: ${attr.key} (${attr.type})`);
+        } else {
+          const createData = await createResponse.json().catch(() => ({ message: 'Unknown error' }));
+          
+          // SKIP trying to update the user attributes, there's something wrong with the API side
+/*
+          // If attribute exists (409 Conflict), try to update it
+          if (createResponse.status === 409) {
+
+            const objClone = { ...attr };
+            if ('key' in objClone) {
+                // @ts-ignore
+                delete objClone.key;
+            }
+
+            const updateResponse = await fetch(`https://api.permit.io/v2/schema/${project}/${environment}/users/attributes/${attr.key}`, {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(objClone)
+            });
+
+            if (updateResponse.ok) {
+              log(`✓ Updated user attribute: ${attr.key} (${attr.type})`);
+            } else {
+              const updateData = await updateResponse.json().catch(() => ({ message: 'Unknown error' }));
+              handleError({ 
+                status: updateResponse.status, 
+                message: updateData.message || `Failed to update attribute: ${attr.key}`, 
+                data: updateData 
+              }, `User attribute update for ${attr.key}`);
+            }
+          } else {
+            handleError({ 
+              status: createResponse.status, 
+              message: createData.message || `Failed to create attribute: ${attr.key}`, 
+              data: createData 
+            }, `User attribute creation for ${attr.key}`);
+          }
+              */
+        }
+      } catch (error) {
+        handleError({ 
+          status: 500, 
+          message: error.message || `API request failed for ${attr.key}` 
+        }, `API request for user attribute ${attr.key}`);
+      }
+    }
+    log('✓ User attributes setup complete');
+  } catch (error) {
+    handleError({ 
+      status: 500, 
+      message: error.message || 'Unknown error in user attributes setup' 
+    }, 'User attributes setup');
+  }
+}
+
+/**
  * Main setup function
  */
 async function setup() {
@@ -126,6 +226,9 @@ async function setup() {
   verbose(`Using environment: ${permit.config.environment}`);
 
   try {
+    // Step 0: Set up user attributes for the environment
+    await setupUserAttributes();
+    
     // Step 1: Set up resource types with attributes
     if (!args.skipResources) {
       await setupresources();

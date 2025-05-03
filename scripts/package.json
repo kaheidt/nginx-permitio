@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "dotenv": "^10.0.0",
+    "node-fetch": "^2.7.0",
     "permitio": "^2.0.0"
   }
 }

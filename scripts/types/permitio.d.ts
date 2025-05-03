@@ -20,6 +20,7 @@ declare module 'permitio' {
     policies: PoliciesAPI;
     tenants: TenantsAPI;
     users: UsersAPI;
+    userAttributes: UserAttributesAPI;
   }
 
   export interface ResourcesAPI {
@@ -27,6 +28,13 @@ declare module 'permitio' {
     list(): Promise<ResourceType[]>;
     create(key: string, resource: ResourceType): Promise<ResourceType>;
     update(key: string, resource: ResourceType): Promise<ResourceType>;
+  }
+
+  export interface UserAttributesAPI {
+    get(key: string): Promise<UserAttribute>;
+    list(): Promise<UserAttribute[]>;
+    create(attribute: UserAttribute): Promise<UserAttribute>;
+    update(key: string, attribute: UserAttribute): Promise<UserAttribute>;
   }
 
   export interface RolesAPI {
@@ -119,6 +127,12 @@ declare module 'permitio' {
   export interface UserRole {
     role: string;
     tenant: string;
+  }
+
+  export interface UserAttribute {
+    key: string;
+    type: string;
+    description: string;
   }
 
   // Custom error type for better error handling
