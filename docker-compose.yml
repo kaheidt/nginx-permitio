@@ -12,7 +12,8 @@ services:
     ports:
       - "${NGINX_PORT:-8080}:80"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
+      # Mount specific files to allow configuration changes without rebuilding
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
     environment:
       - PERMIT_API_KEY=${PERMIT_API_KEY}
       - PERMIT_LOCAL_PDP_URL=http://pdp-sidecar:7000

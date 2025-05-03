@@ -51,8 +51,8 @@ API-First authorization moves authorization decisions to a dedicated layer:
 
 Our architecture consists of:
 
-1. **NGINX API Gateway with Permit.io NJS Module** - Acts as the Policy Enforcement Point (PEP)
-2. **Permit.io Cloud PDP** - Provides centralized Policy Decision Point
+1. **NGINX API Gateway with Permit.io Lua Module** - Acts as the Policy Enforcement Point (PEP)
+2. **Permit.io Sidecar Local (or Cloud) PDP** - Provides centralized Policy Decision Point
 3. **Backend Microservices** - Four automotive-focused API services
 4. **Authentication Service** - Handles user login and JWT token issuance
 
@@ -284,46 +284,86 @@ Create roles and assign permissions with conditions:
 
 ### Step 3: Configure NGINX Integration
 
-Integrate Permit.io with NGINX using the JavaScript module:
+Integrate Permit.io with NGINX using the Lua module:
 
-```javascript
-function permitio_check_auth(r) {
-  const token = permitio_token(r);
-  const method = r.method;
-  const path = r.uri;
-  
-  // Determine resource and action from request
-  let resource = extractResourceFromPath(path);
-  let action = mapMethodToAction(method);
-  
-  // Check permission with Permit.io
-  const response = ngx.fetch(permitio_pdp_url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${permitApiKey}` },
-    body: JSON.stringify({
-      user: extractUserFromToken(token),
-      action: action,
-      resource: resource,
-      context: { /* request context */ }
+```lua
+-- In permit.lua module
+function _M.check_authorization()
+    -- Extract token from the request
+    local token = _M.extract_token()
+    if not token then
+        ngx.status = 401
+        ngx.header.content_type = "application/json"
+        ngx.say(cjson.encode({ error = "Unauthorized: No valid Bearer token provided" }))
+        return ngx.exit(401)
+    end
+    
+    -- Extract user information from token
+    local user_info = _M.extract_user_info(token)
+    
+    -- Determine resource and action from request path and method
+    local method = ngx.req.get_method()
+    local path = ngx.var.uri
+    
+    -- Example of resource mapping logic
+    local resource = ""
+    if string.find(path, "/vehicles") then
+        resource = "vehicle"
+        resource_id = string.match(path, "/vehicles/([^/]+)")
+    end
+    
+    -- Map HTTP method to action
+    local action = ""
+    if method == "GET" then
+        action = "read"
+    elseif method == "POST" then
+        action = "create"
+    elseif method == "PUT" or method == "PATCH" then
+        action = "update"
+    elseif method == "DELETE" then
+        action = "delete"
+    end
+    
+    -- Make authorization request to PDP
+    local httpc = http.new()
+    local res, err = httpc:request_uri(pdp_url, {
+        method = "POST",
+        body = cjson.encode({
+            user = {
+                key = user_info.user_id,
+                -- User attributes
+            },
+            action = action,
+            resource = {
+                type = resource,
+                key = resource_id or "",
+                -- Resource attributes
+            }
+        }),
+        headers = {
+            ["Content-Type"] = "application/json",
+            ["Authorization"] = "Bearer " .. permit_api_key
+        }
     })
-  });
-  
-  // Handle response
-  response.then(res => {
-    if (res.status === 200) {
-      return res.json();
-    } else {
-      r.return(403);
-    }
-  })
-  .then(data => {
-    if (data && data.allow) {
-      r.return(200);
-    } else {
-      r.return(403);
-    }
-  });
-}
+    
+    -- Handle authorization response
+    if res.status == 200 then
+        local pdp_response = cjson.decode(res.body)
+        if pdp_response.allow == true then
+            -- Continue to the backend service
+            return true
+        else
+            -- Return 403 Forbidden with reason
+            ngx.status = 403
+            ngx.header.content_type = "application/json"
+            ngx.say(cjson.encode({
+                error = "Forbidden",
+                message = pdp_response.reason or "Access denied by policy"
+            }))
+            return ngx.exit(403)
+        end
+    end
+end
 ```
 
 For a complete implementation guide, see our [Configuration Documentation](docs/configuration.md).

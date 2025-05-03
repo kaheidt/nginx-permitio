@@ -17,7 +17,7 @@ This approach ensures consistent enforcement of access control policies across a
 ```
 ┌─────────────────┐     ┌─────────────────────────────────────┐     ┌─────────────────┐
 │                 │     │                                     │     │                 │
-│    Frontend     │────▶│   NGINX with Permit.io NJS Module   │────▶│  Microservices  │
+│    Frontend     │────▶│   NGINX with Permit.io Lua Module   │────▶│  Microservices  │
 │   Applications  │     │                                     │     │                 │
 │                 │     └─────────────────┬───────────────────┘     └─────────────────┘
 └─────────────────┘                       │
@@ -44,7 +44,7 @@ This approach ensures consistent enforcement of access control policies across a
 
 ### 1. NGINX API Gateway
 
-The NGINX API Gateway acts as a Policy Enforcement Point (PEP) using the NGINX JavaScript (NJS) module integrated with Permit.io. It:
+The NGINX API Gateway acts as a Policy Enforcement Point (PEP) using the NGINX Lua module integrated with Permit.io. It:
 
 - Intercepts all API requests
 - Extracts authorization context (user, action, resource)
@@ -54,7 +54,7 @@ The NGINX API Gateway acts as a Policy Enforcement Point (PEP) using the NGINX J
 
 **Key Technologies:**
 - NGINX
-- NGINX JavaScript (NJS) module
+- NGINX Lua module
 - JWT Authentication
 
 ### 2. Local PDP Sidecar

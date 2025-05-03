@@ -225,22 +225,24 @@ For production environments, you may want to integrate with your existing user d
 
 ## Step 3: NGINX Configuration
 
-### Configure NGINX JavaScript Module
+### Configure NGINX Lua Module
 
-The NGINX JavaScript module is already set up in the `nginx/conf.d/permit.js` file. You can customize the following aspects:
+The NGINX Lua module is already set up in the `nginx/conf.d/permit.lua` file. You can customize the following aspects:
 
 1. **Resource mapping logic** - How URLs map to resources and actions
 2. **JWT token extraction** - How user information is extracted from the token
 3. **Context enrichment** - Additional context sent to Permit.io for decisions
 
-```javascript
-// Example: Customizing resource mapping
-if (path.includes('/vehicles')) {
-  resource = 'vehicle';
-  const match = path.match(/\/vehicles\/([^\/]+)/);
-  resourceId = match ? match[1] : '';
-} 
-// Add custom resource mappings here
+```lua
+-- Example: Customizing resource mapping
+if string.find(path, "/vehicles") then
+    resource = "vehicle"
+    resource_id = string.match(path, "/vehicles/([^/]+)")
+    if resource_id then
+        resource_attributes = { vehicle_ids = {resource_id} }
+    end
+end
+-- Add custom resource mappings here
 ```
 
 ### Configure NGINX Routes
@@ -249,10 +251,14 @@ The NGINX routes are defined in `nginx/conf.d/default.conf`. Add new routes by f
 
 ```nginx
 location /api/v1/your-new-endpoint {
-  auth_request /_permit_check_auth;
-  auth_request_set $authorization $upstream_http_authorization;
-  proxy_set_header Authorization $authorization;
-  proxy_pass ${YOUR_SERVICE_URL};
+    access_by_lua_block {
+        local permit = require("permit")
+        permit.check_authorization()
+    }
+    
+    # Preserve original client Authorization header
+    proxy_set_header Authorization $http_authorization;
+    proxy_pass ${YOUR_SERVICE_URL};
 }
 ```
 
@@ -461,20 +467,16 @@ View authorization decisions in Permit.io's audit logs:
 
 ### Custom Logging
 
-You can add custom logging in the NGINX JavaScript module:
+You can add custom logging in the NGINX Lua module:
 
-```javascript
-// Example: Adding custom logging
-response.then(res => {
-  if (res.status === 200) {
-    r.log(`Authorization allowed for ${userId} on ${resource}:${resourceId}`);
-    return res.json();
-  } else {
-    r.warn(`Authorization denied for ${userId} on ${resource}:${resourceId}`);
-    r.return(403, "Forbidden: Authorization check failed");
-    return null;
-  }
-})
+```lua
+-- Example: Adding custom logging
+if res.status == 200 then
+    ngx.log(ngx.INFO, "Authorization allowed for ", user_id, " on ", resource, ":", resource_id)
+else
+    ngx.log(ngx.WARN, "Authorization denied for ", user_id, " on ", resource, ":", resource_id)
+    ngx.exit(ngx.HTTP_FORBIDDEN)
+end
 ```
 
 ## Troubleshooting
@@ -491,9 +493,9 @@ response.then(res => {
    - Check that user claims match expected format
    - Ensure token isn't expired
 
-3. **NGINX JavaScript Errors:**
+3. **NGINX Lua Errors:**
    - Check NGINX error logs: `docker logs nginx-api-gateway`
-   - Verify JavaScript syntax and API usage
+   - Verify Lua syntax and API usage
 
 4. **Permit.io API Connectivity:**
    - Check network connectivity to Permit.io PDP

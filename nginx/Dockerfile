@@ -1,21 +1,36 @@
-FROM nginx:mainline
+FROM openresty/openresty:alpine
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg2 \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl git \
+    && cd /tmp \
+    # Install lua-resty-http module
+    && git clone https://github.com/ledgetech/lua-resty-http \
+    && cd lua-resty-http \
+    && cp -r lib/resty/* /usr/local/openresty/lualib/resty/ \
+    && cd /tmp \
+    # Install lua-resty-openssl module
+    && git clone https://github.com/fffonion/lua-resty-openssl \
+    && cd lua-resty-openssl \
+    && cp -r lib/resty/* /usr/local/openresty/lualib/resty/ \
+    && cd /tmp \
+    && rm -rf lua-resty-http lua-resty-openssl
 
-# Copy NGINX configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+#Don't override the openresty.conf file, as it is used by the openresty image to start nginx
+#COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+
+# Copy configuration files
+
 COPY conf.d/default.conf /etc/nginx/conf.d/default.conf
+COPY conf.d/env.main /etc/nginx/conf.d/env.main
 
-# Copy Permit.io JavaScript file
-COPY conf.d/permit.js /etc/nginx/conf.d/permit.js
+# Copy and properly place the Permit.io Lua module
+COPY conf.d/permit.lua /usr/local/openresty/lualib/permit.lua
 
-# Expose ports
+# Create directory for OpenResty temp paths
+RUN mkdir -p /var/run/openresty
+
+# Expose port
 EXPOSE 80
 
-# Start NGINX with environment variables available
+# Start OpenResty
 CMD ["nginx", "-g", "daemon off;"]

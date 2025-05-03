@@ -278,3 +278,62 @@ When deploying the sidecar architecture to AWS, we had to make several adjustmen
 4. **Log Configuration**: Set up CloudWatch log groups for monitoring PDP sidecar operations
 
 The migration from cloud PDP to local PDP sidecar represents a significant architectural improvement that aligns with edge computing principles—bringing the authorization decisions closer to where they're needed for optimal performance.
+
+### Decision: Migrating from NGINX JavaScript (NJS) to Lua with OpenResty
+
+After encountering stability issues with the NGINX JavaScript module for authorization handling, we made the strategic decision to migrate to Lua with OpenResty.
+
+**Reasons for Change:**
+- **Request Handling Reliability**: Initial implementation with JavaScript encountered issues where client requests would time out after service URL calls
+- **Synchronous Programming Model**: Lua's synchronous approach simplifies request handling compared to JavaScript's asynchronous model
+- **Better Integration with NGINX**: Lua integrates more naturally with NGINX's request processing phases
+- **Mature Ecosystem**: OpenResty provides robust libraries like `lua-resty-http` for making HTTP requests to the PDP
+- **Production Reliability**: OpenResty is widely adopted for high-traffic API gateways in production environments
+
+**Implementation Approach:**
+
+1. **OpenResty Base Image**: Switched from standard NGINX to the OpenResty Alpine image
+   ```dockerfile
+   FROM openresty/openresty:alpine
+   ```
+
+2. **Lua Module Development**: Created a dedicated Lua module with clear authorization logic
+   ```lua
+   local _M = {}
+   
+   function _M.check_authorization()
+     -- Extract token and user information
+     -- Make authorization decision request to PDP
+     -- Handle response and enforce decision
+   end
+   
+   return _M
+   ```
+
+3. **NGINX Configuration Update**: Replaced JavaScript directives with Lua directives
+   ```nginx
+   access_by_lua_block {
+       local permit = require("permit")
+       permit.check_authorization()
+   }
+   ```
+
+4. **HTTP Client Improvement**: Utilized OpenResty's `lua-resty-http` library for more reliable HTTP communication with the PDP sidecar
+
+**Benefits Realized:**
+
+- **Request Completion Reliability**: Eliminated the issue of hanging client requests after PDP calls
+- **Simplified Debugging**: Lua's synchronous code flow is easier to debug compared to JavaScript Promises
+- **Performance Improvements**: Reduced latency in authorization checks with more efficient request handling
+- **Better Error Handling**: More robust error handling with clearer error responses to clients
+- **Reduced Memory Usage**: Lua typically uses less memory than the JavaScript engine in NGINX
+
+**Challenges Overcome:**
+
+1. **Knowledge Transfer**: Required team to learn Lua programming paradigms
+2. **JWT Handling**: Re-implementing JWT token parsing and validation in Lua
+3. **Configuration Updates**: Adjusting NGINX configuration to properly load and utilize Lua modules
+4. **Testing Methodology**: Developing new testing strategies for the Lua-based implementation
+5. **Experimenting With Permit.io Framework**: Had to pass contextual info as array attributes for proper condition rule application
+
+This architectural change highlights the importance of selecting the right tools for critical components like authorization. The migration to Lua with OpenResty provided a more reliable foundation for our API-First authorization approach, ensuring consistent and performant policy enforcement at the API gateway layer.
