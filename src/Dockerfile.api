@@ -3,11 +3,11 @@ FROM node:16-alpine
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY services/api/package*.json ./
+COPY src/services/api/package*.json ./
 RUN npm install
 
 # Copy service code
-COPY services/api/ ./
+COPY src/services/api/ ./
 
 # Set environment variables
 ENV NODE_ENV=production

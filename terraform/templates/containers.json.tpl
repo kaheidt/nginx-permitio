@@ -19,7 +19,7 @@
       "timeout": 5,
       "retries": 3,
       "startPeriod": 60
-    ],
+    },
     "environment": [
       {
         "name": "PERMIT_LOCAL_PDP_URL",
@@ -91,7 +91,7 @@
       "timeout": 5,
       "retries": 3,
       "startPeriod": 60
-    ],
+    },
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
@@ -121,7 +121,7 @@
       "timeout": 5,
       "retries": 3,
       "startPeriod": 60
-    ],
+    },
     "environment": [
       {
         "name": "PORT",
@@ -157,7 +157,7 @@
       "timeout": 5,
       "retries": 3,
       "startPeriod": 60
-    ],
+    },
     "environment": [
       {
         "name": "PORT",

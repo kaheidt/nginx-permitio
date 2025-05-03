@@ -103,6 +103,7 @@ module "ecs" {
     region             = var.aws_region
     secrets_arn        = module.secrets.secrets_arn
     log_group          = module.ecs.log_group_name
+    environment        = var.environment
   })
 }
 

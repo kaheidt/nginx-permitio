@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to get ECR login password."
     exit 1
 }
-$ecrLoginCmd | docker login --username AWS --password-stdin $ECR_REPO_URL
+docker login --username AWS --password $ecrLoginCmd $ECR_REPO_URL
 
 # Build and push NGINX image
 Write-Host "Building and pushing NGINX Docker image..."
@@ -67,8 +67,8 @@ if ($LASTEXITCODE -ne 0) {
 # Build and push API service image
 Write-Host "Building and pushing API service Docker image..."
 Set-Location -Path "$currentDir\.."  # Move to project root
-# Build from the root directory with correct service path
-docker build -t "$ECR_REPO_URL`:api" -f src/Dockerfile.api --build-arg SERVICE_NAME=api .
+# Build from the root directory with correct context
+docker build -t "$ECR_REPO_URL`:api" -f src/Dockerfile.api .
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build API Docker image."
     exit 1
@@ -82,7 +82,7 @@ if ($LASTEXITCODE -ne 0) {
 # Build and push Auth service image
 Write-Host "Building and pushing Auth service Docker image..."
 # Still in the project root directory
-docker build -t "$ECR_REPO_URL`:auth" -f src/Dockerfile.auth --build-arg SERVICE_NAME=auth .
+docker build -t "$ECR_REPO_URL`:auth" -f src/Dockerfile.auth .
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build Auth Docker image."
     exit 1
