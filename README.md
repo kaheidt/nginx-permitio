@@ -31,6 +31,7 @@ Each API has different access control requirements based on user roles:
 - 📱 **Multi-tenant Architecture** - Support for multiple organizations and user hierarchies
 - 🔄 **Real-time Policy Updates** - Policy changes take effect immediately without redeployments
 - 📊 **Audit Logging** - Comprehensive logging of all authorization decisions
+- 📝 **Interactive API Documentation** - Swagger UI for testing authorization policies directly in the browser
 
 ## Why API-First Authorization Matters?
 
@@ -55,6 +56,7 @@ Our architecture consists of:
 2. **Permit.io Sidecar Local (or Cloud) PDP** - Provides centralized Policy Decision Point
 3. **Backend Microservices** - Four automotive-focused API services
 4. **Authentication Service** - Handles user login and JWT token issuance
+5. **Swagger UI Service** - Interactive API documentation and testing interface
 
 The authorization flow works as follows:
 
@@ -107,7 +109,18 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-4. Test the API
+4. Access the Swagger UI for interactive API testing
+```
+http://localhost:8080/docs/
+```
+The Swagger UI provides a complete interactive documentation of all API endpoints with:
+- Built-in authentication flow
+- Pre-configured example requests
+- Sample payloads for each endpoint
+- Live testing with real-time authorization decisions
+- Easy comparison between allowed and denied operations
+
+5. Test the API with curl
 ```bash
 # Login to get a token
 curl -X POST http://localhost:8080/auth/login \
@@ -223,6 +236,11 @@ This project includes a comprehensive Terraform setup to deploy the NGINX-Permit
    cd ../terraform
    terraform output load_balancer_dns
    ```
+   
+   The Swagger UI documentation will be available at:
+   ```
+   http://<load_balancer_dns>/docs/
+   ```
 
 7. To destroy the infrastructure when no longer needed:
    ```bash
@@ -242,6 +260,21 @@ Our Connected Vehicle Services Platform exposes multiple RESTful APIs:
 - **Driver Analytics API** - Driving behavior and statistics
 
 Each API endpoint has specific authorization requirements based on user roles and resource ownership.
+
+### Interactive API Documentation with Swagger UI
+
+A comprehensive Swagger UI interface is available to interactively explore and test the API:
+
+- **Local Development**: [http://localhost:8080/docs/](http://localhost:8080/docs/)
+- **AWS Deployment**: [http://<load_balancer_dns>/docs/](http://<load_balancer_dns>/docs/)
+
+The Swagger UI provides:
+- Complete OpenAPI specification of all endpoints
+- Interactive authentication with JWT
+- Pre-populated demo credentials (username: "newuser", password: "2025DEVChallenge")
+- Test cases for both allowed and denied authorization scenarios
+- Example responses for successful and error cases
+- Detailed schema documentation for all request/response payloads
 
 For complete API documentation, see the [API Documentation](docs/api.md).
 

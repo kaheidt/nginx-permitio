@@ -137,7 +137,7 @@ async function createOrUpdateEntity(entityType, key, entity, getFunc, createFunc
       existing = await getFunc(key);
       log(`${entityType} ${key} already exists, updating...`);
     } catch (error) {
-      if (error.status !== 404) {
+      if (error.originalError.status !== 404) {
         throw error;
       }
     }
@@ -277,13 +277,18 @@ async function setupConditionSets() {
       conditions: {
         allOf: [
           {
-            allOf: [
+            "anyOf": [
               {
-                "resource.vehicle_ids": {
-                  array_intersect: {
-                    ref: "user.vehicles"
+                  "resource.vehicle_ids": {
+                      "array_intersect": {
+                          "ref": "user.vehicles"
+                      }
                   }
-                }
+              },
+              {
+                  "resource.vehicle_ids": {
+                      "array_len_equals": 0
+                  }
               }
             ]
           }
@@ -642,6 +647,11 @@ async function setupTenants() {
       key: 'safe-auto-insurance',
       name: 'Safe Auto Insurance',
       description: 'Tenant for insurance providers'
+    },
+    {
+      key: 'automotive-platform',
+      name: 'Automotive Platform',
+      description: 'Owner of the platform'
     }
   ];
 
@@ -653,7 +663,7 @@ async function setupTenants() {
         existingTenant = await permit.api.tenants.get(tenant.key);
         log(`Tenant ${tenant.name} already exists, updating...`);
       } catch (error) {
-        if (error.status !== 404) {
+        if (error.originalError.status !== 404) {
           throw error;
         }
       }
@@ -693,7 +703,7 @@ async function setupUsers() {
         id: 'admin',
       },
       role_assignments: [
-        { role: 'system_administrator', tenants: ['personal-vehicles', 'acme-auto-service', 'swift-delivery', 'safe-auto-insurance'] }
+        { role: 'system_administrator', tenants: ['personal-vehicles', 'acme-auto-service', 'swift-delivery', 'safe-auto-insurance', 'automotive-platform'] }
       ]
     },
     {
@@ -770,7 +780,7 @@ async function setupUsers() {
         existingUser = await permit.api.users.get(user.key);
         log(`User ${user.key} already exists, updating...`);
       } catch (error) {
-        if (error.status !== 404) {
+        if (error.originalError.status !== 404) {
           throw error;
         }
       }

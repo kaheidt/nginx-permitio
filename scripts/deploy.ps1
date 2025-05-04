@@ -93,6 +93,20 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Build and push Swagger UI service image
+Write-Host "Building and pushing Swagger UI service Docker image..."
+# Still in the project root directory
+docker build -t "$ECR_REPO_URL`:swagger" -f src/Dockerfile.swagger .
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to build Swagger UI Docker image."
+    exit 1
+}
+docker push "$ECR_REPO_URL`:swagger"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Failed to push Swagger UI Docker image to ECR."
+    exit 1
+}
+
 Write-Host "All images have been built and pushed to ECR."
 Write-Host "You can now update the ECS service to deploy the new images."
 

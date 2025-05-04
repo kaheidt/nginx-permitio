@@ -73,8 +73,8 @@ const users = {
     tenantId: 'safe-auto-insurance',
     coverageRegions: ['northeast', 'southeast']
   },
-  'admin-1': {
-    id: 'admin-1',
+  'admin': {
+    id: 'admin',
     username: 'admin',
     password: '2025DEVChallenge',
     firstName: 'Admin',

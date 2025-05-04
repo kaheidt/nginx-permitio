@@ -320,6 +320,7 @@ For multi-tenant environments:
    - acme-auto-service (for service centers)
    - swift-delivery (for fleet operators)
    - safe-auto-insurance (for insurance providers)
+   - automotive-platform (for the owner of the platform)
 
 2. Assign users to tenants with appropriate roles
 3. Ensure tenant information is included in JWT tokens

@@ -1,0 +1,1035 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AutoSecure API Gateway",
+    "description": "API-First Authorization for Automotive Industry using Permit.io with NGINX",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@autosecure-example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current host (local development or AWS deployment)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token for authorization. Use the token obtained from the login endpoint."
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "newuser",
+            "description": "User's login name"
+          },
+          "password": {
+            "type": "string",
+            "example": "2025DEVChallenge",
+            "description": "User's password"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT token for authorization"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "User's unique identifier"
+              },
+              "username": {
+                "type": "string",
+                "description": "User's login name"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "User's first name"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "User's last name"
+              },
+              "roles": {
+                "type": "array",
+                "description": "User's assigned roles",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tenantId": {
+                "type": "string",
+                "description": "Tenant identifier the user belongs to"
+              }
+            }
+          }
+        }
+      },
+      "Vehicle": {
+        "type": "object",
+        "properties": {
+          "vin": {
+            "type": "string",
+            "description": "Vehicle Identification Number",
+            "example": "VIN123456789"
+          },
+          "make": {
+            "type": "string",
+            "description": "Vehicle manufacturer",
+            "example": "Tesla"
+          },
+          "model": {
+            "type": "string",
+            "description": "Vehicle model",
+            "example": "Model 3"
+          },
+          "year": {
+            "type": "integer",
+            "description": "Manufacturing year",
+            "example": 2023
+          },
+          "owner": {
+            "type": "string",
+            "description": "Vehicle owner ID",
+            "example": "vehicle-owner-1"
+          },
+          "telemetry": {
+            "type": "object",
+            "description": "Vehicle telemetry data",
+            "properties": {
+              "odometer": {
+                "type": "integer",
+                "description": "Current odometer reading in miles",
+                "example": 12345
+              },
+              "batteryLevel": {
+                "type": "integer",
+                "description": "Battery level percentage",
+                "example": 78
+              },
+              "tirePressure": {
+                "type": "array",
+                "description": "Tire pressure readings in PSI for each tire",
+                "items": {
+                  "type": "integer"
+                },
+                "example": [34, 35, 34, 36]
+              },
+              "engineHealth": {
+                "type": "string",
+                "description": "Overall engine health status",
+                "example": "good"
+              },
+              "lastUpdated": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp of the last telemetry update",
+                "example": "2025-04-30T10:15:30Z"
+              },
+              "location": {
+                "type": "object",
+                "description": "Vehicle location coordinates",
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "description": "Latitude coordinate",
+                    "example": 37.7749
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "description": "Longitude coordinate",
+                    "example": -122.4194
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "VehiclesResponse": {
+        "type": "object",
+        "properties": {
+          "vehicles": {
+            "type": "array",
+            "description": "List of vehicles the user has access to",
+            "items": {
+              "$ref": "#/components/schemas/Vehicle"
+            }
+          }
+        }
+      },
+      "ServiceRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the service record",
+            "example": "SR-12345"
+          },
+          "vin": {
+            "type": "string",
+            "description": "Vehicle Identification Number",
+            "example": "VIN123456789"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of service",
+            "example": "2025-03-15"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of service performed",
+            "example": "regular-maintenance"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of service performed",
+            "example": "Regular 10,000 mile service"
+          },
+          "technician": {
+            "type": "string",
+            "description": "Technician who performed the service",
+            "example": "service-tech-1"
+          },
+          "cost": {
+            "type": "number",
+            "description": "Cost of service",
+            "example": 199.99
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the service record",
+            "example": "completed"
+          }
+        }
+      },
+      "ServiceRecordsResponse": {
+        "type": "object",
+        "properties": {
+          "serviceRecords": {
+            "type": "array",
+            "description": "List of service records the user has access to",
+            "items": {
+              "$ref": "#/components/schemas/ServiceRecord"
+            }
+          }
+        }
+      },
+      "Fleet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the fleet",
+            "example": "delivery-fleet-east"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the fleet",
+            "example": "East Coast Delivery Fleet"
+          },
+          "manager": {
+            "type": "string",
+            "description": "Fleet manager ID",
+            "example": "fleet-mgr-1"
+          },
+          "vehicles": {
+            "type": "array",
+            "description": "List of VINs in the fleet",
+            "items": {
+              "type": "string"
+            },
+            "example": ["VIN123456789", "VIN987654321"]
+          },
+          "region": {
+            "type": "string",
+            "description": "Geographical region of the fleet",
+            "example": "northeast"
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Fleet performance metrics",
+            "properties": {
+              "totalVehicles": {
+                "type": "integer",
+                "description": "Total number of vehicles in the fleet",
+                "example": 25
+              },
+              "activeVehicles": {
+                "type": "integer",
+                "description": "Number of active vehicles",
+                "example": 22
+              },
+              "inServiceVehicles": {
+                "type": "integer",
+                "description": "Number of vehicles currently in service",
+                "example": 3
+              },
+              "averageFuelEfficiency": {
+                "type": "number",
+                "description": "Average fuel efficiency across the fleet (mpg)",
+                "example": 28.5
+              },
+              "totalMileage": {
+                "type": "integer",
+                "description": "Total mileage across all vehicles in the fleet",
+                "example": 125000
+              }
+            }
+          }
+        }
+      },
+      "FleetsResponse": {
+        "type": "object",
+        "properties": {
+          "fleets": {
+            "type": "array",
+            "description": "List of fleets the user has access to",
+            "items": {
+              "$ref": "#/components/schemas/Fleet"
+            }
+          }
+        }
+      },
+      "DriverAnalytics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Driver identifier",
+            "example": "vehicle-owner-1"
+          },
+          "safetyScore": {
+            "type": "number",
+            "description": "Driver safety score out of 100",
+            "example": 92
+          },
+          "drivingHabits": {
+            "type": "object",
+            "description": "Driver habits analytics",
+            "properties": {
+              "averageSpeed": {
+                "type": "number",
+                "description": "Average speed in mph",
+                "example": 65
+              },
+              "hardBrakes": {
+                "type": "integer",
+                "description": "Number of hard braking events in the last 30 days",
+                "example": 5
+              },
+              "rapidAccelerations": {
+                "type": "integer",
+                "description": "Number of rapid acceleration events in the last 30 days",
+                "example": 3
+              },
+              "nightDriving": {
+                "type": "string",
+                "description": "Percentage of night driving",
+                "example": "10%"
+              },
+              "phoneUsage": {
+                "type": "string",
+                "description": "Percentage of driving time with phone usage",
+                "example": "2%"
+              }
+            }
+          },
+          "mileage": {
+            "type": "object",
+            "description": "Driver mileage statistics",
+            "properties": {
+              "daily": {
+                "type": "number",
+                "description": "Average daily mileage",
+                "example": 25
+              },
+              "weekly": {
+                "type": "number",
+                "description": "Average weekly mileage",
+                "example": 175
+              },
+              "monthly": {
+                "type": "number",
+                "description": "Average monthly mileage",
+                "example": 750
+              }
+            }
+          },
+          "insurance": {
+            "type": "object",
+            "description": "Insurance information",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "description": "Insurance provider name",
+                "example": "safe-auto-insurance"
+              },
+              "agent": {
+                "type": "string",
+                "description": "Insurance agent ID",
+                "example": "insurance-agent-1"
+              },
+              "premium": {
+                "type": "number",
+                "description": "Annual insurance premium",
+                "example": 1200
+              },
+              "discount": {
+                "type": "string",
+                "description": "Current discount percentage",
+                "example": "15%"
+              }
+            }
+          }
+        }
+      },
+      "DriverAnalyticsResponse": {
+        "type": "object",
+        "properties": {
+          "driverData": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DriverAnalytics"
+            },
+            "description": "Driver analytics data the user has access to"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Vehicle Telemetry",
+      "description": "Vehicle telemetry data endpoints"
+    },
+    {
+      "name": "Maintenance",
+      "description": "Vehicle maintenance and service record endpoints"
+    },
+    {
+      "name": "Fleet Management",
+      "description": "Fleet management endpoints"
+    },
+    {
+      "name": "Driver Analytics",
+      "description": "Driver analytics and behavior endpoints"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "security": [],
+        "summary": "Login to get an access token",
+        "description": "Authenticate with username and password to get a JWT token for API access",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "regular-user": {
+                  "summary": "Regular Vehicle Owner Login",
+                  "value": {
+                    "username": "newuser",
+                    "password": "2025DEVChallenge"
+                  }
+                },
+                "admin-user": {
+                  "summary": "Admin User Login",
+                  "value": {
+                    "username": "admin",
+                    "password": "2025DEVChallenge"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get user profile",
+        "description": "Retrieve the current user's profile information",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "tenantId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing authentication token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vehicles": {
+      "get": {
+        "tags": ["Vehicle Telemetry"],
+        "summary": "Get all authorized vehicles",
+        "description": "Retrieve the list of vehicles that the user is authorized to view. Authorization is controlled by Permit.io policies based on the user's role and relationship to the vehicle.",
+        "operationId": "getVehicles",
+        "responses": {
+          "200": {
+            "description": "List of vehicles retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiclesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vehicles/{vin}": {
+      "get": {
+        "tags": ["Vehicle Telemetry"],
+        "summary": "Get vehicle data by VIN",
+        "description": "Retrieve detailed information for a specific vehicle by its VIN. Authorization is controlled by Permit.io policies.",
+        "operationId": "getVehicleByVin",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Vehicle Identification Number",
+            "examples": {
+              "allowed": {
+                "summary": "VIN that regular user has access to",
+                "value": "VIN123456789"
+              },
+              "denied": {
+                "summary": "VIN that regular user doesn't have access to (requires admin)",
+                "value": "VIN555666777"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicle data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vehicle"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vehicle not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance": {
+      "get": {
+        "tags": ["Maintenance"],
+        "summary": "Get all authorized maintenance records",
+        "description": "Retrieve the list of maintenance records that the user is authorized to view. Authorization is controlled by Permit.io policies.",
+        "operationId": "getMaintenanceRecords",
+        "responses": {
+          "200": {
+            "description": "List of maintenance records retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRecordsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/{id}": {
+      "get": {
+        "tags": ["Maintenance"],
+        "summary": "Get maintenance record by ID",
+        "description": "Retrieve detailed information for a specific maintenance record by its ID. Authorization is controlled by Permit.io policies.",
+        "operationId": "getMaintenanceRecordById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Maintenance record ID",
+            "examples": {
+              "record1": {
+                "summary": "Completed service record",
+                "value": "SR-12345"
+              },
+              "record2": {
+                "summary": "Scheduled service record",
+                "value": "SR-12346"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Maintenance record retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Maintenance record not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fleet": {
+      "get": {
+        "tags": ["Fleet Management"],
+        "summary": "Get all authorized fleets",
+        "description": "Retrieve the list of fleets that the user is authorized to view. Authorization is controlled by Permit.io policies.",
+        "operationId": "getFleets",
+        "responses": {
+          "200": {
+            "description": "List of fleets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fleet/{id}": {
+      "get": {
+        "tags": ["Fleet Management"],
+        "summary": "Get fleet by ID",
+        "description": "Retrieve detailed information for a specific fleet by its ID. Authorization is controlled by Permit.io policies.",
+        "operationId": "getFleetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fleet ID",
+            "examples": {
+              "eastCoast": {
+                "summary": "East Coast Delivery Fleet",
+                "value": "delivery-fleet-east"
+              },
+              "westCoast": {
+                "summary": "West Coast Delivery Fleet",
+                "value": "delivery-fleet-west"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fleet data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fleet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Fleet not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics": {
+      "get": {
+        "tags": ["Driver Analytics"],
+        "summary": "Get all authorized driver analytics",
+        "description": "Retrieve driver analytics data that the user is authorized to view. Authorization is controlled by Permit.io policies. Requires proper permissions (Admin user will have access).",
+        "operationId": "getDriverAnalytics",
+        "responses": {
+          "200": {
+            "description": "Driver analytics data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverAnalyticsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/{id}": {
+      "get": {
+        "tags": ["Driver Analytics"],
+        "summary": "Get driver analytics by ID",
+        "description": "Retrieve detailed analytics for a specific driver by their ID. Authorization is controlled by Permit.io policies. Requires proper permissions (Admin user will have access).",
+        "operationId": "getDriverAnalyticsById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Driver ID",
+            "examples": {
+              "owner1": {
+                "summary": "Vehicle Owner 1",
+                "value": "vehicle-owner-1"
+              },
+              "owner2": {
+                "summary": "Vehicle Owner 2",
+                "value": "vehicle-owner-2"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Driver analytics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverAnalytics"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Permit.io policy denied access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Driver analytics not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

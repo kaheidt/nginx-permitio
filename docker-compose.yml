@@ -23,6 +23,7 @@ services:
       - LOCAL_FLEET_MANAGEMENT_SERVICE_URL=http://fleet-management:3003
       - LOCAL_DRIVER_ANALYTICS_SERVICE_URL=http://driver-analytics:3004
       - LOCAL_AUTH_SERVICE_URL=http://auth-service:3000
+      - LOCAL_SWAGGER_UI_SERVICE_URL=http://swagger-ui:3005
     networks:
       - api-gateway-network
     depends_on:
@@ -32,6 +33,7 @@ services:
       - maintenance-service
       - fleet-management
       - driver-analytics
+      - swagger-ui
       - echo
 
   echo:
@@ -77,6 +79,18 @@ services:
       - api-gateway-network
     ports:
       - "3000:3000"
+
+  # Swagger UI Service
+  swagger-ui:
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile.swagger
+    environment:
+      - PORT=3005
+    networks:
+      - api-gateway-network
+    ports:
+      - "3005:3005"
 
   # Vehicle Telemetry Service
   vehicle-telemetry:

@@ -1,0 +1,20 @@
+FROM node:16-alpine
+
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY src/services/swagger/package*.json ./
+RUN npm install
+
+# Copy service code and OpenAPI spec
+COPY src/services/swagger/ ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3005
+
+# Expose the service port
+EXPOSE ${PORT}
+
+# Start the service
+CMD ["node", "index.js"]

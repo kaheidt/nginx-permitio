@@ -36,6 +36,10 @@
         "value": "http://127.0.0.1:3000"
       },
       {
+        "name": "LOCAL_SWAGGER_UI_SERVICE_URL", 
+        "value": "http://127.0.0.1:3005"
+      },
+      {
         "name": "PERMIT_ENVIRONMENT",
         "value": "${environment}"
       }
@@ -98,36 +102,6 @@
         "awslogs-group": "${log_group}",
         "awslogs-region": "${region}",
         "awslogs-stream-prefix": "pdp-sidecar"
-      }
-    }
-  }, 
-  {
-    "name": "vehicle-telemetry",
-    "image": "${ecr_repository_url}:api",
-    "essential": true,
-    "portMappings": [
-      {
-        "containerPort": 3000,
-        "hostPort": 3000,
-        "protocol": "tcp"
-      }
-    ],
-    "environment": [
-      {
-        "name": "PORT",
-        "value": "3000"
-      },
-      {
-        "name": "SERVICE_NAME",
-        "value": "vehicle-telemetry"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${log_group}",
-        "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "api"
       }
     }
   },
@@ -217,7 +191,7 @@
       "options": {
         "awslogs-group": "${log_group}",
         "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "api"
+        "awslogs-stream-prefix": "fleet-management"
       }
     }
   },
@@ -250,7 +224,33 @@
         "awslogs-stream-prefix": "driver-analytics"
       }
     }
-  }, 
+  },
+  {
+    "name": "swagger-ui",
+    "image": "${ecr_repository_url}:swagger",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 3005,
+        "hostPort": 3005,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      {
+        "name": "PORT",
+        "value": "3005"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "swagger-ui"
+      }
+    }
+  },
   {
     "name": "auth",
     "image": "${ecr_repository_url}:auth",

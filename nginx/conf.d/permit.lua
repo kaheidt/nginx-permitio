@@ -156,6 +156,8 @@ function _M.check_authorization()
         resource_id = string.match(path, "/vehicles/([^/]+)")
         if resource_id then
             resource_attributes = { vehicle_ids = {resource_id} }
+        else
+            resource_attributes = { vehicle_ids = {} }
         end
     elseif string.find(path, "/maintenance") then
         resource = "maintenance"

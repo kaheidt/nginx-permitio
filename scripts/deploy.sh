@@ -42,14 +42,19 @@ docker push $ECR_REPO_URL:latest
 
 # Build and push API service image
 echo "Building and pushing API service Docker image..."
-cd ../src
-docker build -t $ECR_REPO_URL:api -f Dockerfile.api .
+cd ..
+docker build -t $ECR_REPO_URL:api -f src/Dockerfile.api .
 docker push $ECR_REPO_URL:api
 
 # Build and push Auth service image
 echo "Building and pushing Auth service Docker image..."
-docker build -t $ECR_REPO_URL:auth -f Dockerfile.auth .
+docker build -t $ECR_REPO_URL:auth -f src/Dockerfile.auth .
 docker push $ECR_REPO_URL:auth
+
+# Build and push Swagger UI service image
+echo "Building and pushing Swagger UI service Docker image..."
+docker build -t $ECR_REPO_URL:swagger -f src/Dockerfile.swagger .
+docker push $ECR_REPO_URL:swagger
 
 echo "All images have been built and pushed to ECR."
 echo "You can now update the ECS service to deploy the new images."
@@ -58,7 +63,7 @@ echo "You can now update the ECS service to deploy the new images."
 read -p "Do you want to update the ECS service now? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    cd ../terraform
+    cd terraform
     CLUSTER_NAME=$(terraform output -raw cluster_name)
     SERVICE_NAME=$(terraform output -raw service_name)
     
