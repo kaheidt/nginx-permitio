@@ -29,7 +29,7 @@ resource "aws_lb_listener" "http" {
 # Target group for the NGINX authorization gateway service
 resource "aws_lb_target_group" "main" {
   name        = "${var.project_name}-${var.environment}-tg-${var.name_suffix}"
-  port        = 8080
+  port        = 80
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"

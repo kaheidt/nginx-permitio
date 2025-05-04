@@ -238,12 +238,12 @@ After our initial implementation using the Permit.io cloud-hosted Policy Decisio
      image: permitio/pdp-v2:latest
      environment:
        - PDP_API_KEY=${PERMIT_API_KEY}
-       - PDP_LISTENER_URL=0.0.0.0:7766
+       - PDP_LISTENER_URL=0.0.0.0:7000
    ```
 
 2. **Updated Authorization Flow**: Modified NGINX JavaScript module to communicate with the local PDP endpoint
    ```javascript
-   const pdpUrl = process.env.PERMIT_LOCAL_PDP_URL || 'http://pdp-sidecar:7766';
+   const pdpUrl = process.env.PERMIT_LOCAL_PDP_URL || 'http://pdp-sidecar:7000';
    // Make HTTP request to local PDP sidecar
    ```
 

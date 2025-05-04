@@ -5,15 +5,15 @@
     "essential": true,
     "portMappings": [
       {
-        "containerPort": 8080,
-        "hostPort": 8080,
+        "containerPort": 80,
+        "hostPort": 80,
         "protocol": "tcp"
       }
     ],
     "healthCheck": {
       "command": [
         "CMD-SHELL",
-        "curl -f http://localhost:8080/pdp-health || exit 1"
+        "curl -f http://localhost:80/pdp-health || exit 1"
       ],
       "interval": 30,
       "timeout": 5,
@@ -23,7 +23,7 @@
     "environment": [
       {
         "name": "PERMIT_LOCAL_PDP_URL",
-        "value": "http://localhost:7766"
+        "value": "http://localhost:7000"
       },
       {
         "name": "PERMIT_ENVIRONMENT",
@@ -61,15 +61,15 @@
     "essential": true,
     "portMappings": [
       {
-        "containerPort": 7766,
-        "hostPort": 7766,
+        "containerPort": 7000,
+        "hostPort": 7000,
         "protocol": "tcp"
       }
     ],
     "environment": [
       {
         "name": "PDP_LISTENER_URL",
-        "value": "0.0.0.0:7766"
+        "value": "0.0.0.0:7000"
       },
       {
         "name": "PERMIT_ENVIRONMENT",
@@ -82,16 +82,6 @@
         "valueFrom": "${secrets_arn}:PERMIT_API_KEY::"
       }
     ],
-    "healthCheck": {
-      "command": [
-        "CMD-SHELL",
-        "curl -f http://localhost:7766/health || exit 1"
-      ],
-      "interval": 30,
-      "timeout": 5,
-      "retries": 3,
-      "startPeriod": 60
-    },
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
@@ -112,16 +102,6 @@
         "protocol": "tcp"
       }
     ],
-    "healthCheck": {
-      "command": [
-        "CMD-SHELL",
-        "curl -f http://localhost:3000/health || exit 1"
-      ],
-      "interval": 30,
-      "timeout": 5,
-      "retries": 3,
-      "startPeriod": 60
-    },
     "environment": [
       {
         "name": "PORT",
@@ -148,16 +128,6 @@
         "protocol": "tcp"
       }
     ],
-    "healthCheck": {
-      "command": [
-        "CMD-SHELL",
-        "curl -f http://localhost:4000/health || exit 1"
-      ],
-      "interval": 30,
-      "timeout": 5,
-      "retries": 3,
-      "startPeriod": 60
-    },
     "environment": [
       {
         "name": "PORT",
@@ -165,7 +135,7 @@
       },
       {
         "name": "PERMIT_LOCAL_PDP_URL",
-        "value": "http://localhost:7766"
+        "value": "http://localhost:7000"
       },
       {
         "name": "PERMIT_ENVIRONMENT",
