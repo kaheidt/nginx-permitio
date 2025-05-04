@@ -96,14 +96,6 @@ app.post('/auth/login', async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
   }
 
-  // Synchronize user with Permit.io if needed
-  try {
-    await syncUserWithPermit(user);
-  } catch (error) {
-    console.error('Error syncing user with Permit.io:', error);
-    // Continue with login even if sync fails
-  }
-
   // Create JWT token
   const token = jwt.sign(
     { 

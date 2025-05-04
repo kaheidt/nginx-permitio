@@ -243,7 +243,7 @@ After our initial implementation using the Permit.io cloud-hosted Policy Decisio
 
 2. **Updated Authorization Flow**: Modified NGINX JavaScript module to communicate with the local PDP endpoint
    ```javascript
-   const pdpUrl = process.env.PERMIT_LOCAL_PDP_URL || 'http://pdp-sidecar:7000';
+   const pdpUrl = process.env.LOCAL_PERMIT_PDP_URL || 'http://pdp-sidecar:7000';
    // Make HTTP request to local PDP sidecar
    ```
 

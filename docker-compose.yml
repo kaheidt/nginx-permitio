@@ -16,13 +16,13 @@ services:
       - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
     environment:
       - PERMIT_API_KEY=${PERMIT_API_KEY}
-      - PERMIT_LOCAL_PDP_URL=http://pdp-sidecar:7000
+      - LOCAL_PERMIT_PDP_URL=http://pdp-sidecar:7000
       - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT:-dev}
-      - VEHICLE_TELEMETRY_SERVICE_URL=http://vehicle-telemetry:3001
-      - MAINTENANCE_SERVICE_URL=http://maintenance-service:3002
-      - FLEET_MANAGEMENT_SERVICE_URL=http://fleet-management:3003
-      - DRIVER_ANALYTICS_SERVICE_URL=http://driver-analytics:3004
-      - AUTH_SERVICE_URL=http://auth-service:3000
+      - LOCAL_VEHICLE_TELEMETRY_SERVICE_URL=http://vehicle-telemetry:3001
+      - LOCAL_MAINTENANCE_SERVICE_URL=http://maintenance-service:3002
+      - LOCAL_FLEET_MANAGEMENT_SERVICE_URL=http://fleet-management:3003
+      - LOCAL_DRIVER_ANALYTICS_SERVICE_URL=http://driver-analytics:3004
+      - LOCAL_AUTH_SERVICE_URL=http://auth-service:3000
     networks:
       - api-gateway-network
     depends_on:
@@ -64,14 +64,14 @@ services:
 
   auth-service:
     build:
-      context: ./src
-      dockerfile: Dockerfile.auth
+      context: .
+      dockerfile: ./src/Dockerfile.auth
     environment:
       - AUTH_SECRET=${AUTH_SECRET:-mysecret123}
       - AUTH_ISSUER=${AUTH_ISSUER:-autosecure-api}
       - AUTH_AUDIENCE=${AUTH_AUDIENCE:-api-users}
       - PERMIT_API_KEY=${PERMIT_API_KEY}
-      - PERMIT_LOCAL_PDP_URL=http://pdp-sidecar:7000
+      - LOCAL_PERMIT_PDP_URL=http://pdp-sidecar:7000
       - PERMIT_ENVIRONMENT=${PERMIT_ENVIRONMENT:-dev}
     networks:
       - api-gateway-network
@@ -81,8 +81,8 @@ services:
   # Vehicle Telemetry Service
   vehicle-telemetry:
     build:
-      context: ./src
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: ./src/Dockerfile.api
     environment:
       - SERVICE_NAME=vehicle-telemetry
       - PORT=3001
@@ -94,8 +94,8 @@ services:
   # Maintenance Service
   maintenance-service:
     build:
-      context: ./src
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: ./src/Dockerfile.api
     environment:
       - SERVICE_NAME=maintenance-service
       - PORT=3002
@@ -107,8 +107,8 @@ services:
   # Fleet Management Service
   fleet-management:
     build:
-      context: ./src
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: ./src/Dockerfile.api
     environment:
       - SERVICE_NAME=fleet-management
       - PORT=3003
@@ -120,8 +120,8 @@ services:
   # Driver Analytics Service
   driver-analytics:
     build:
-      context: ./src
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: ./src/Dockerfile.api
     environment:
       - SERVICE_NAME=driver-analytics
       - PORT=3004

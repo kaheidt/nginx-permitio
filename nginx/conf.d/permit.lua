@@ -115,7 +115,7 @@ function _M.check_authorization()
     
     -- Get API key and other config from environment with multiple fallback options
     local permit_api_key = get_env("PERMIT_API_KEY", "")
-    local pdp_url_base = get_env("PERMIT_LOCAL_PDP_URL", get_env("PERMIT_PDP_URL", "http://pdp-sidecar:7000"))
+    local pdp_url_base = get_env("LOCAL_PERMIT_PDP_URL", get_env("PERMIT_PDP_URL", "http://pdp-sidecar:7000"))
     local permit_env = get_env("PERMIT_ENVIRONMENT", "dev")
     
     ngx.log(ngx.INFO, "Environment check: " ..
@@ -233,6 +233,23 @@ function _M.check_authorization()
     -- Make HTTP request to PDP sidecar
     local httpc = http.new()
     httpc:set_timeout(5000) -- 5 second timeout
+
+    -- Extract the protocol, host and path from pdp_url_base
+local protocol, host, port
+local pattern = "^(https?)://([^:/]+):?(%d*)(.*)$"
+local proto_match, host_match, port_match, path_match = string.match(pdp_url_base, pattern)
+
+protocol = proto_match or "http"
+host = host_match or "localhost" 
+port = port_match ~= "" and port_match or "7000"
+
+-- Force using direct IP for localhost in AWS ECS
+if host == "localhost" or host == "pdp-sidecar" then
+    -- In AWS ECS, containers within the same task share network namespace,
+    -- so localhost (127.0.0.1) will work correctly
+    host = "127.0.0.1"
+end
+
     
     local pdp_url = pdp_url_base .. "/allowed"
     ngx.log(ngx.INFO, "Making request to PDP: " .. pdp_url)

@@ -10,20 +10,30 @@
         "protocol": "tcp"
       }
     ],
-    "healthCheck": {
-      "command": [
-        "CMD-SHELL",
-        "curl -f http://localhost:80/pdp-health || exit 1"
-      ],
-      "interval": 30,
-      "timeout": 5,
-      "retries": 3,
-      "startPeriod": 60
-    },
     "environment": [
       {
-        "name": "PERMIT_LOCAL_PDP_URL",
-        "value": "http://localhost:7000"
+        "name": "LOCAL_PERMIT_PDP_URL",
+        "value": "http://127.0.0.1:7000"
+      },
+      {
+        "name": "LOCAL_VEHICLE_TELEMETRY_SERVICE_URL",
+        "value": "http://127.0.0.1:3001"
+      },
+      {
+        "name": "LOCAL_MAINTENANCE_SERVICE_URL",
+        "value": "http://127.0.0.1:3002"
+      },
+      {
+        "name": "LOCAL_FLEET_MANAGEMENT_SERVICE_URL",
+        "value": "http://127.0.0.1:3003"
+      },
+      {
+        "name": "LOCAL_DRIVER_ANALYTICS_SERVICE_URL",
+        "value": "http://127.0.0.1:3004"
+      },
+      {
+        "name": "LOCAL_AUTH_SERVICE_URL",
+        "value": "http://127.0.0.1:3000"
       },
       {
         "name": "PERMIT_ENVIRONMENT",
@@ -90,9 +100,9 @@
         "awslogs-stream-prefix": "pdp-sidecar"
       }
     }
-  },
+  }, 
   {
-    "name": "api",
+    "name": "vehicle-telemetry",
     "image": "${ecr_repository_url}:api",
     "essential": true,
     "portMappings": [
@@ -106,6 +116,10 @@
       {
         "name": "PORT",
         "value": "3000"
+      },
+      {
+        "name": "SERVICE_NAME",
+        "value": "vehicle-telemetry"
       }
     ],
     "logConfiguration": {
@@ -118,28 +132,156 @@
     }
   },
   {
-    "name": "auth",
-    "image": "${ecr_repository_url}:auth",
+    "name": "vehicle-telemetry",
+    "image": "${ecr_repository_url}:api",
     "essential": true,
     "portMappings": [
       {
-        "containerPort": 4000,
-        "hostPort": 4000,
+        "containerPort": 3001,
+        "hostPort": 3001,
         "protocol": "tcp"
       }
     ],
     "environment": [
       {
         "name": "PORT",
-        "value": "4000"
+        "value": "3001"
       },
       {
-        "name": "PERMIT_LOCAL_PDP_URL",
-        "value": "http://localhost:7000"
+        "name": "SERVICE_NAME",
+        "value": "vehicle-telemetry"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "vehicle-telemetry"
+      }
+    }
+  },
+  {
+    "name": "maintenance-service",
+    "image": "${ecr_repository_url}:api",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 3002,
+        "hostPort": 3002,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      {
+        "name": "PORT",
+        "value": "3002"
+      },
+      {
+        "name": "SERVICE_NAME",
+        "value": "maintenance-service"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "maintenance-service"
+      }
+    }
+  },
+  {
+    "name": "fleet-management",
+    "image": "${ecr_repository_url}:api",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 3003,
+        "hostPort": 3003,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      {
+        "name": "PORT",
+        "value": "3003"
+      },
+      {
+        "name": "SERVICE_NAME",
+        "value": "fleet-management"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "api"
+      }
+    }
+  },
+  {
+    "name": "driver-analytics",
+    "image": "${ecr_repository_url}:api",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 3004,
+        "hostPort": 3004,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      {
+        "name": "PORT",
+        "value": "3004"
+      },
+      {
+        "name": "SERVICE_NAME",
+        "value": "driver-analytics"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${region}",
+        "awslogs-stream-prefix": "driver-analytics"
+      }
+    }
+  }, 
+  {
+    "name": "auth",
+    "image": "${ecr_repository_url}:auth",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 3000,
+        "hostPort": 3000,
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      {
+        "name": "PORT",
+        "value": "3000"
+      },
+      {
+        "name": "LOCAL_PERMIT_PDP_URL",
+        "value": "http://127.0.0.1:7000"
       },
       {
         "name": "PERMIT_ENVIRONMENT",
         "value": "${environment}"
+      },
+      {
+        "name": "AUTH_ISSUER",
+        "value": "auto-secure-api-gateway"
+      },
+      {
+        "name": "AUTH_AUDIENCE",
+        "value": "auto-secure-services"
       }
     ],
     "secrets": [
