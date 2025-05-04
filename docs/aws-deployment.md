@@ -6,7 +6,19 @@ This guide provides detailed instructions for deploying the NGINX-Permit.io auth
 
 Our AWS deployment architecture consists of:
 
-![AWS Architecture Diagram](images/aws-architecture.png)
+```mermaid
+graph TD
+    A[Frontend Applications] -->|Requests| B[Application Load Balancer]
+    B -->|Routes Traffic| C[ECS Fargate Cluster]
+    C -->|Runs| D[NGINX API Gateway]
+    C -->|Runs| E[Backend Microservices]
+    D -->|Authorization Requests| F[Permit.io PDP Sidecar]
+    F -->|Policy Sync| G[Permit.io Cloud PAP]
+    C -->|Logs| H[CloudWatch]
+    C -->|Stores Images| I[ECR Repository]
+    C -->|Secrets| J[Secrets Manager]
+    C -->|Networking| K[VPC with Subnets]
+```
 
 - **VPC** with public and private subnets across multiple availability zones
 - **ECS Fargate** to run containerized services (NGINX, API, Auth)

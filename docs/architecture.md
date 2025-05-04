@@ -130,6 +130,32 @@ The authorization model is based on a combination of:
    - If authorized, request is forwarded to backend service
    - If denied, 403 Forbidden response is returned
 
+## Request Flow Diagram
+
+The following diagram illustrates the flow of a request from the client to NGINX, through the Permit.io PDP, and finally to the backend services:
+
+```mermaid
+graph TD
+    A[Client] -->|Sends Request| B[NGINX API Gateway]
+    B -->|Extracts JWT, Resource, Action| C[Permit.io PDP Sidecar]
+    C -->|Evaluates Policies| D[Permit.io Cloud PAP]
+    C -->|Returns Allow/Deny Decision| B
+    B -->|Forwards Allowed Requests| E[Backend Microservices]
+    E -->|Processes Request| F[Response to Client]
+    B -->|Returns 403 Forbidden| G[Client Denied]
+```
+
+### Steps in the Flow
+
+1. **Client Request**: The client sends a request to the NGINX API Gateway, including a JWT token in the Authorization header.
+2. **NGINX Processing**: NGINX extracts the JWT token, resource, and action from the request and sends an authorization check to the Permit.io PDP Sidecar.
+3. **PDP Evaluation**: The PDP evaluates the request against the policies, optionally syncing with the Permit.io Cloud PAP for the latest policies.
+4. **Decision Returned**: The PDP returns an allow or deny decision to NGINX.
+5. **Request Handling**:
+   - If allowed, NGINX forwards the request to the appropriate backend microservice.
+   - If denied, NGINX returns a 403 Forbidden response to the client.
+6. **Backend Response**: The backend microservice processes the request and sends a response back to the client via NGINX.
+
 ## Benefits of this Architecture
 
 - **Separation of Concerns:** Authorization logic separate from business logic

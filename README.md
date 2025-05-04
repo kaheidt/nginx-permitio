@@ -1,8 +1,10 @@
+![Autosecure Gateway: API First](/docs/images/Autosecure_Gateway.jpeg)
 # AutoSecure API Gateway: API-First Authorization for Automotive Industry
 
 An innovative API gateway solution leveraging NGINX and Permit.io to implement fine-grained authorization for automotive industry applications.
 
-![API-First Authorization Architecture](https://raw.githubusercontent.com/permitio/nginx-guard/main/docs/nginx-permit.png)
+## LIVE DEMO
+Try it out [LIVE HERE](http://nginx-permitio-dev-alb-4vmsoywl-419828416.us-east-1.elb.amazonaws.com/docs)
 
 ## Project Overview
 
@@ -266,7 +268,7 @@ Each API endpoint has specific authorization requirements based on user roles an
 A comprehensive Swagger UI interface is available to interactively explore and test the API:
 
 - **Local Development**: [http://localhost:8080/docs/](http://localhost:8080/docs/)
-- **AWS Deployment**: [http://<load_balancer_dns>/docs/](http://<load_balancer_dns>/docs/)
+- **AWS Deployment**: [http://nginx-permitio-dev-alb-4vmsoywl-419828416.us-east-1.elb.amazonaws.com/docs/](http://nginx-permitio-dev-alb-4vmsoywl-419828416.us-east-1.elb.amazonaws.com/docs/)
 
 The Swagger UI provides:
 - Complete OpenAPI specification of all endpoints
