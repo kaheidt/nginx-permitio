@@ -94,51 +94,34 @@ For a detailed explanation of our authorization model, see the [Authorization Mo
 
 ### Quick Start
 
-1. Clone this repository
+#### 1. Clone this repository
 ```bash
 git clone https://github.com/kaheidt/nginx-permitio.git
 cd nginx-permitio
 ```
 
-2. Set up environment variables
+#### 2. Set up environment variables
 ```bash
 cp .env.example .env
 # Edit .env with your Permit.io API key and other settings
 ```
+The key environment variables to configure are:
 
-3. Start the services
-```bash
-docker-compose up -d
+```
+# Permit.io Configuration
+PERMIT_API_KEY=your_permit_api_key_here
+PERMIT_PDP_URL=https://cloudpdp.api.permit.io
+PERMIT_ENVIRONMENT=dev
+
+# Auth Service Configuration
+AUTH_SECRET=change_this_to_a_secure_secret
 ```
 
-4. Access the Swagger UI for interactive API testing
-```
-http://localhost:8080/docs/
-```
-The Swagger UI provides a complete interactive documentation of all API endpoints with:
-- Built-in authentication flow
-- Pre-configured example requests
-- Sample payloads for each endpoint
-- Live testing with real-time authorization decisions
-- Easy comparison between allowed and denied operations
+#### 3. Setup Permit.Io
 
-5. Test the API with curl
-```bash
-# Login to get a token
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "newuser", "password": "2025DEVChallenge"}'
+You need to configure your authorization model in Permit.io. You have two options:
 
-# Use the token to access a protected resource
-curl -X GET http://localhost:8080/api/v1/vehicles \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-### Next Steps: Configure Authorization Model
-
-After starting the services, you need to configure your authorization model in Permit.io. You have two options:
-
-#### Option 1: One-Click Setup with the Setup Script
+##### Option 1: One-Click Setup with the Setup Script
 
 To quickly set up the complete authorization model including resources, roles, and permissions:
 
@@ -176,11 +159,40 @@ The script accepts various command line arguments:
 
 This will automatically create all resources, roles, policies, tenants, and example users in your Permit.io environment.
 
-#### Option 2: Manual Configuration
+##### Option 2: Manual Configuration
 
 Alternatively, you can manually configure your authorization model through the Permit.io dashboard by following the steps in our [Configuration Guide](docs/configuration.md).
 
 For detailed setup instructions for either option, see our [Configuration Guide](docs/configuration.md).
+
+#### 4. Start the services
+Execute from the project root
+```bash
+docker-compose up -d
+```
+
+#### 5. Access the Swagger UI for interactive API testing
+```
+http://localhost:8080/docs/
+```
+The Swagger UI provides a complete interactive documentation of all API endpoints with:
+- Built-in authentication flow
+- Pre-configured example requests
+- Sample payloads for each endpoint
+- Live testing with real-time authorization decisions
+- Easy comparison between allowed and denied operations
+
+#### 6. Test the API with curl
+```bash
+# Login to get a token
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "2025DEVChallenge"}'
+
+# Use the token to access a protected resource
+curl -X GET http://localhost:8080/api/v1/vehicles \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
 
 ## Cloud Deployment
 
